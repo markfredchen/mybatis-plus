@@ -15,14 +15,19 @@
  */
 package com.baomidou.mybatisplus.core.parser;
 
+import lombok.Data;
+import lombok.experimental.Accessors;
+
 /**
  * <p>
  * Sql Info
  * </p>
  *
  * @author hubin
- * @Date 2017-06-20
+ * @since 2017-06-20
  */
+@Data
+@Accessors(chain = true)
 public class SqlInfo {
 
     /**
@@ -36,23 +41,5 @@ public class SqlInfo {
 
     public static SqlInfo newInstance() {
         return new SqlInfo();
-    }
-
-    public String getSql() {
-        return sql;
-    }
-
-    public SqlInfo setSql(String sql) {
-        this.sql = sql;
-        return this;
-    }
-
-    public boolean isOrderBy() {
-        return orderBy;
-    }
-
-    public SqlInfo setOrderBy(boolean orderBy) {
-        this.orderBy = orderBy;
-        return this;
     }
 }

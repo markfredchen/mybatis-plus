@@ -15,8 +15,16 @@
  */
 package com.baomidou.mybatisplus.core.handlers;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
+import com.baomidou.mybatisplus.core.metadata.TableInfo;
+import com.baomidou.mybatisplus.core.toolkit.Constants;
+import com.baomidou.mybatisplus.core.toolkit.TableInfoHelper;
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.reflection.SystemMetaObject;
+
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * <p>
@@ -24,31 +32,82 @@ import org.apache.ibatis.reflection.SystemMetaObject;
  * </p>
  *
  * @author hubin
- * @Date 2016-08-28
+ * @since 2016-08-28
  */
-public abstract class MetaObjectHandler {
-
-    protected static final String META_OBJ_PREFIX = "et";
+public interface MetaObjectHandler {
 
     /**
-     * <p>
-     * 插入元对象字段填充
-     * </p>
+     * 乐观锁常量
+     */
+    String MP_OPTLOCK_ET_ORIGINAL = "MP_OPTLOCK_ET_ORIGINAL";
+
+    /**
+     * 插入元对象字段填充（用于插入时对公共字段的填充）
      *
      * @param metaObject 元对象
      */
-    public abstract void insertFill(MetaObject metaObject);
+    void insertFill(MetaObject metaObject);
 
     /**
      * 更新元对象字段填充（用于更新时对公共字段的填充）
-     * Created with IntelliJ IDEA.
-     * Author:  Wu Yujie
-     * Email:  coffee377@dingtalk.com
-     * Time:  2017/04/16 15:03
      *
      * @param metaObject 元对象
      */
-    public abstract void updateFill(MetaObject metaObject);
+    void updateFill(MetaObject metaObject);
+
+    /**
+     * <p>
+     * 通用填充
+     * </p>
+     *
+     * @param fieldName  java bean property name
+     * @param fieldVal   java bean property value
+     * @param metaObject meta object parameter
+     */
+    default MetaObjectHandler setFieldValByName(String fieldName, Object fieldVal, MetaObject metaObject) {
+        if (Objects.nonNull(fieldVal)) {
+            if (metaObject.hasSetter(fieldName) && metaObject.hasGetter(fieldName)) {
+                metaObject.setValue(fieldName, fieldVal);
+            } else if (metaObject.hasGetter(Constants.ENTITY)) {
+                Object et = metaObject.getValue(Constants.ENTITY);
+                if (et != null) {
+                    MetaObject etMeta = SystemMetaObject.forObject(et);
+                    if (etMeta.hasSetter(fieldName)) {
+                        etMeta.setValue(fieldName, fieldVal);
+                    }
+                }
+            }
+        }
+        return this;
+    }
+
+    /**
+     * <p>
+     * insert 时填充,只会填充 fill 被标识为 INSERT 与 INSERT_UPDATE 的字段
+     * </p>
+     *
+     * @param fieldName  java bean property name
+     * @param fieldVal   java bean property value
+     * @param metaObject meta object parameter
+     * @since 3.0.7
+     */
+    default MetaObjectHandler setInsertFieldValByName(String fieldName, Object fieldVal, MetaObject metaObject) {
+        return setFieldValByName(fieldName, fieldVal, metaObject, FieldFill.INSERT);
+    }
+
+    /**
+     * <p>
+     * update 时填充,只会填充 fill 被标识为 UPDATE 与 INSERT_UPDATE 的字段
+     * </p>
+     *
+     * @param fieldName  java bean property name
+     * @param fieldVal   java bean property value
+     * @param metaObject meta object parameter
+     * @since 3.0.7
+     */
+    default MetaObjectHandler setUpdateFieldValByName(String fieldName, Object fieldVal, MetaObject metaObject) {
+        return setFieldValByName(fieldName, fieldVal, metaObject, FieldFill.UPDATE);
+    }
 
     /**
      * <p>
@@ -61,16 +120,21 @@ public abstract class MetaObjectHandler {
      * @param fieldName  java bean property name
      * @param fieldVal   java bean property value
      * @param metaObject meta object parameter
+     * @param fieldFill  填充策略枚举
+     * @since 3.0.7
      */
-    public MetaObjectHandler setFieldValByName(String fieldName, Object fieldVal, MetaObject metaObject) {
-        if (metaObject.hasSetter(fieldName) && metaObject.hasGetter(fieldName)) {
-            metaObject.setValue(fieldName, fieldVal);
-        } else if (metaObject.hasGetter(META_OBJ_PREFIX)) {
-            Object et = metaObject.getValue(META_OBJ_PREFIX);
-            if (et != null) {
-                MetaObject etMeta = SystemMetaObject.forObject(et);
-                if (etMeta.hasSetter(fieldName)) {
-                    etMeta.setValue(fieldName, fieldVal);
+    default MetaObjectHandler setFieldValByName(String fieldName, Object fieldVal, MetaObject metaObject, FieldFill fieldFill) {
+        if (Objects.nonNull(fieldVal)) {
+            if (metaObject.hasSetter(fieldName) && metaObject.hasGetter(fieldName)
+                && isFill(fieldName, fieldVal, metaObject, fieldFill)) {
+                metaObject.setValue(fieldName, fieldVal);
+            } else if (metaObject.hasGetter(Constants.ENTITY)) {
+                Object et = metaObject.getValue(Constants.ENTITY);
+                if (et != null) {
+                    MetaObject etMeta = SystemMetaObject.forObject(et);
+                    if (etMeta.hasSetter(fieldName) && isFill(fieldName, fieldVal, etMeta, fieldFill)) {
+                        etMeta.setValue(fieldName, fieldVal);
+                    }
                 }
             }
         }
@@ -87,42 +151,59 @@ public abstract class MetaObjectHandler {
      *
      * @param fieldName  java bean property name
      * @param metaObject parameter wrapper
-     * @return
+     * @return 字段值
      */
-    public Object getFieldValByName(String fieldName, MetaObject metaObject) {
+    default Object getFieldValByName(String fieldName, MetaObject metaObject) {
         if (metaObject.hasGetter(fieldName)) {
             return metaObject.getValue(fieldName);
-        } else if (metaObject.hasGetter(META_OBJ_PREFIX + "." + fieldName)) {
-            return metaObject.getValue(META_OBJ_PREFIX + "." + fieldName);
+        } else if (metaObject.hasGetter(Constants.ENTITY_DOT + fieldName)) {
+            return metaObject.getValue(Constants.ENTITY_DOT + fieldName);
         }
         return null;
     }
 
     /**
-     * 开启插入填充
+     * <p>
+     * 填充判断
+     * </p>
+     * <li> 如果是主键,不填充 </li>
+     * <li> 根据字段名找不到字段,不填充 </li>
+     * <li> 字段类型与填充值类型不匹配,不填充 </li>
+     *
+     * @param fieldName  java bean property name
+     * @param fieldVal   java bean property value
+     * @param metaObject meta object parameter
+     * @param fieldFill  填充策略枚举
+     * @return 是否进行填充
+     * @since 3.0.7
      */
-    public boolean openInsertFill() {
+    default boolean isFill(String fieldName, Object fieldVal, MetaObject metaObject, FieldFill fieldFill) {
+        TableInfo tableInfo = metaObject.hasGetter(MP_OPTLOCK_ET_ORIGINAL) ?
+            TableInfoHelper.getTableInfo(metaObject.getValue(MP_OPTLOCK_ET_ORIGINAL).getClass())
+            : TableInfoHelper.getTableInfo(metaObject.getOriginalObject().getClass());
+        if (Objects.nonNull(tableInfo)) {
+            Optional<TableFieldInfo> first = tableInfo.getFieldList().stream()
+                .filter(e -> e.getProperty().equals(fieldName) && e.getPropertyType().equals(fieldVal.getClass()))
+                .findFirst();
+            if (first.isPresent()) {
+                FieldFill fill = first.get().getFieldFill();
+                return fill.equals(fieldFill) || FieldFill.INSERT_UPDATE.equals(fill);
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 是否开启了插入填充
+     */
+    default boolean openInsertFill() {
         return true;
     }
 
     /**
-     * 开启更新填充
+     * 是否开启了更新填充
      */
-    public boolean openUpdateFill() {
+    default boolean openUpdateFill() {
         return true;
-    }
-
-    public static MetaObjectHandler getInstance() {
-        return new MetaObjectHandler() {
-            @Override
-            public void insertFill(MetaObject metaObject) {
-                //default do nothing
-            }
-
-            @Override
-            public void updateFill(MetaObject metaObject) {
-                //default do nothing
-            }
-        };
     }
 }

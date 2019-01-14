@@ -16,6 +16,7 @@
 package com.baomidou.mybatisplus.generator.config.po;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import lombok.Data;
 
 /**
  * <p>
@@ -25,6 +26,7 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
  * @author hubin
  * @since 2017-06-26
  */
+@Data
 public class TableFill {
 
     /**
@@ -36,28 +38,8 @@ public class TableFill {
      */
     private FieldFill fieldFill;
 
-    private TableFill() {
-        // to do nothing
-    }
-
     public TableFill(String fieldName, FieldFill ignore) {
         this.fieldName = fieldName;
         this.fieldFill = ignore;
-    }
-
-    public String getFieldName() {
-        return fieldName;
-    }
-
-    public void setFieldName(String fieldName) {
-        this.fieldName = fieldName;
-    }
-
-    public FieldFill getFieldFill() {
-        return fieldFill;
-    }
-
-    public void setFieldFill(FieldFill fieldFill) {
-        this.fieldFill = fieldFill;
     }
 }

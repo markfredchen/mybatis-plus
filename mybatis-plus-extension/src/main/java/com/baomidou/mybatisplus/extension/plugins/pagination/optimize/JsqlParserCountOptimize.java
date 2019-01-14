@@ -25,7 +25,8 @@ import org.apache.ibatis.reflection.MetaObject;
 import com.baomidou.mybatisplus.core.parser.ISqlParser;
 import com.baomidou.mybatisplus.core.parser.SqlInfo;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
-import com.baomidou.mybatisplus.core.toolkit.sql.SqlUtils;
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
+import com.baomidou.mybatisplus.extension.toolkit.SqlParserUtils;
 
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.Function;
@@ -53,10 +54,10 @@ public class JsqlParserCountOptimize implements ISqlParser {
      * 日志
      */
     private final Log logger = LogFactory.getLog(JsqlParserCountOptimize.class);
-    private static final List<SelectItem> countSelectItem = countSelectItem();
+    private static final List<SelectItem> COUNT_SELECT_ITEM = countSelectItem();
 
     @Override
-    public SqlInfo optimizeSql(MetaObject metaObject, String sql) {
+    public SqlInfo parser(MetaObject metaObject, String sql) {
         if (logger.isDebugEnabled()) {
             logger.debug(" JsqlParserCountOptimize sql=" + sql);
         }
@@ -75,24 +76,20 @@ public class JsqlParserCountOptimize implements ISqlParser {
             }
             //#95 Github, selectItems contains #{} ${}, which will be translated to ?, and it may be in a function: power(#{myInt},2)
             for (SelectItem item : plainSelect.getSelectItems()) {
-                if (item.toString().contains("?")) {
-                    sqlInfo.setSql(SqlUtils.getOriginalCountSql(selectStatement.toString()));
-                    return sqlInfo;
+                if (item.toString().contains(StringPool.QUESTION_MARK)) {
+                    return sqlInfo.setSql(SqlParserUtils.getOriginalCountSql(selectStatement.toString()));
                 }
             }
             // 包含 distinct、groupBy不优化
             if (distinct != null || CollectionUtils.isNotEmpty(groupBy)) {
-                sqlInfo.setSql(SqlUtils.getOriginalCountSql(selectStatement.toString()));
-                return sqlInfo;
+                return sqlInfo.setSql(SqlParserUtils.getOriginalCountSql(selectStatement.toString()));
             }
             // 优化 SQL
-            plainSelect.setSelectItems(countSelectItem);
-            sqlInfo.setSql(selectStatement.toString());
-            return sqlInfo;
+            plainSelect.setSelectItems(COUNT_SELECT_ITEM);
+            return sqlInfo.setSql(selectStatement.toString());
         } catch (Throwable e) {
             // 无法优化使用原 SQL
-            sqlInfo.setSql(SqlUtils.getOriginalCountSql(sql));
-            return sqlInfo;
+            return sqlInfo.setSql(SqlParserUtils.getOriginalCountSql(sql));
         }
     }
 

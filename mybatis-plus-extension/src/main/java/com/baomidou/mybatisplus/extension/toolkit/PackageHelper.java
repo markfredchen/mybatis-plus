@@ -15,9 +15,7 @@
  */
 package com.baomidou.mybatisplus.extension.toolkit;
 
-import java.util.HashSet;
-import java.util.Set;
-
+import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -26,7 +24,9 @@ import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.util.ClassUtils;
 
-import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
+import java.io.File;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * <p>
@@ -34,7 +34,7 @@ import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
  * </p>
  *
  * @author hubin
- * @Date 2016-06-16
+ * @since 2016-06-16
  */
 public class PackageHelper {
 
@@ -72,11 +72,10 @@ public class PackageHelper {
             }
             if (!set.isEmpty()) {
                 return set.toArray(new String[]{});
-            } else {
-                throw new MybatisPlusException("not find typeAliasesPackage:" + pkg);
             }
+            return new String[0];
         } catch (Exception e) {
-            throw new MybatisPlusException("not find typeAliasesPackage:" + pkg, e);
+            throw ExceptionUtils.mpe("not find typeAliasesPackage: %s", e, pkg);
         }
     }
 
@@ -110,13 +109,25 @@ public class PackageHelper {
                     }
                 }
             }
-            if (set.isEmpty()) {
-                throw new MybatisPlusException("not find scanTypePackage:" + pkg);
-            } else {
-                return set;
-            }
+            return set;
         } catch (Exception e) {
-            throw new MybatisPlusException("not find scanTypePackage:" + pkg, e);
+            throw ExceptionUtils.mpe("not find scanTypePackage: %s", e, pkg);
+        }
+    }
+
+    /**
+     * <p>
+     * 新建文件目录
+     * </p>
+     *
+     * @param file 文件
+     */
+    public static void mkDir(File file) {
+        if (file.getParentFile().exists()) {
+            file.mkdir();
+        } else {
+            mkDir(file.getParentFile());
+            file.mkdir();
         }
     }
 }

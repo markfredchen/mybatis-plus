@@ -9,56 +9,77 @@
  * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR EntityWrapperS OF ANY KIND, either express or implied. See the
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations under
  * the License.
  */
 package com.baomidou.mybatisplus.core.conditions;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+
 /**
  * <p>
- * 条件查询构造器
+ * Wrapper 条件辅助类
  * </p>
  *
- * @author hubin Caratacus
- * @date 2016-11-7
+ * @author hubin
+ * @see Wrappers
+ * @since 2018-09-01
  */
-@SuppressWarnings({"rawtypes", "serial"})
-public abstract class Condition {
+@Deprecated
+public class Condition {
 
     /**
-     * 构建一个Empty条件构造 避免传递参数使用null
-     */
-    public static final Wrapper EMPTY = Wrapper.getInstance();
-
-    /**
-     * 构造一个空的Wrapper<T></>
+     * <p>
+     * 获取 QueryWrapper 实例
+     * </p>
+     * <p>
+     * 示例：Condition.<User>create().eq("id", 1)
+     * </p>
      *
-     * @param <T>
-     * @return
+     * @see Wrappers#query()
      */
-    public static <T> Wrapper<T> empty() {
-        return (Wrapper<T>) EMPTY;
+    @Deprecated
+    public static <T> QueryWrapper<T> create() {
+        return new QueryWrapper<>();
     }
 
     /**
-     * 构造一个EntityWrapper<T></>
-     *
+     * @param entity
      * @param <T>
      * @return
+     * @see Wrappers#query()
      */
-    public static <T> EntityWrapper<T> entityWrapper() {
-        return entityWrapper(null);
+    @Deprecated
+    public static <T> QueryWrapper<T> create(T entity) {
+        return new QueryWrapper<>(entity);
     }
 
     /**
-     * 构造一个EntityWrapper<T></>
+     * <p>
+     * 获取 LambdaQueryWrapper 实例
+     * </p>
+     * <p>
+     * 示例：Condition.<User>lambda().eq(User::getId, 1)
+     * </p>
      *
-     * @param <T>
-     * @return
+     * @see Wrappers#query(Object)
      */
-    public static <T> EntityWrapper<T> entityWrapper(T entity) {
-        return new EntityWrapper<>(entity);
+    @Deprecated
+    public static <T> LambdaQueryWrapper<T> lambda() {
+        return new LambdaQueryWrapper<>();
     }
 
+    /**
+     * @param entity
+     * @param <T>
+     * @return
+     * @see Wrappers#query(Object)
+     */
+    @Deprecated
+    public static <T> LambdaQueryWrapper<T> lambda(T entity) {
+        return new LambdaQueryWrapper<>(entity);
+    }
 }

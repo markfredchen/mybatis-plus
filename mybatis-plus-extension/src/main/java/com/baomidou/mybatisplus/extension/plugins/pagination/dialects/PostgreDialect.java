@@ -15,8 +15,7 @@
  */
 package com.baomidou.mybatisplus.extension.plugins.pagination.dialects;
 
-
-import com.baomidou.mybatisplus.core.pagination.dialect.IDialect;
+import com.baomidou.mybatisplus.extension.plugins.pagination.DialectModel;
 
 /**
  * <p>
@@ -24,15 +23,13 @@ import com.baomidou.mybatisplus.core.pagination.dialect.IDialect;
  * </p>
  *
  * @author hubin
- * @Date 2016-01-23
+ * @since 2016-01-23
  */
 public class PostgreDialect implements IDialect {
 
-
     @Override
-    public String buildPaginationSql(String originalSql, int offset, int limit) {
-        StringBuilder sql = new StringBuilder(originalSql);
-        sql.append(" limit ").append(limit).append(" offset ").append(offset);
-        return sql.toString();
+    public DialectModel buildPaginationSql(String originalSql, long offset, long limit) {
+        String sql = originalSql + " limit " + FIRST_MARK + " offset " + SECOND_MARK;
+        return new DialectModel(sql, limit, offset).setConsumerChain();
     }
 }

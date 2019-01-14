@@ -15,16 +15,16 @@
  */
 package com.baomidou.mybatisplus.core.injector.methods;
 
-import org.apache.ibatis.mapping.MappedStatement;
-import org.apache.ibatis.mapping.SqlSource;
-
 import com.baomidou.mybatisplus.core.enums.SqlMethod;
 import com.baomidou.mybatisplus.core.injector.AbstractMethod;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
+import com.baomidou.mybatisplus.core.toolkit.sql.SqlScriptUtils;
+import org.apache.ibatis.mapping.MappedStatement;
+import org.apache.ibatis.mapping.SqlSource;
 
 /**
  * <p>
- * 根据 ID 删除
+ * 根据ID集合，批量查询数据
  * </p>
  *
  * @author hubin
@@ -35,12 +35,10 @@ public class SelectBatchByIds extends AbstractMethod {
     @Override
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
         SqlMethod sqlMethod = SqlMethod.SELECT_BATCH_BY_IDS;
-        StringBuilder ids = new StringBuilder();
-        ids.append("<foreach item=\"item\" index=\"index\" collection=\"coll\" separator=\",\">");
-        ids.append("#{item}");
-        ids.append("</foreach>");
         SqlSource sqlSource = languageDriver.createSqlSource(configuration, String.format(sqlMethod.getSql(),
-            this.sqlSelectColumns(tableInfo, false), tableInfo.getTableName(), tableInfo.getKeyColumn(), ids.toString()), modelClass);
-        return this.addSelectMappedStatement(mapperClass, sqlMethod.getMethod(), sqlSource, modelClass, tableInfo);
+            sqlSelectColumns(tableInfo, false), tableInfo.getTableName(), tableInfo.getKeyColumn(),
+            SqlScriptUtils.convertForeach("#{item}", COLLECTION, null, "item", COMMA)),
+            Object.class);
+        return addSelectMappedStatement(mapperClass, sqlMethod.getMethod(), sqlSource, modelClass, tableInfo);
     }
 }

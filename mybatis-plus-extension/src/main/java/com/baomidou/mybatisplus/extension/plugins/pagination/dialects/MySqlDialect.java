@@ -15,8 +15,8 @@
  */
 package com.baomidou.mybatisplus.extension.plugins.pagination.dialects;
 
-
-import com.baomidou.mybatisplus.core.pagination.dialect.IDialect;
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
+import com.baomidou.mybatisplus.extension.plugins.pagination.DialectModel;
 
 /**
  * <p>
@@ -24,14 +24,13 @@ import com.baomidou.mybatisplus.core.pagination.dialect.IDialect;
  * </p>
  *
  * @author hubin
- * @Date 2016-01-23
+ * @since 2016-01-23
  */
 public class MySqlDialect implements IDialect {
 
     @Override
-    public String buildPaginationSql(String originalSql, int offset, int limit) {
-        StringBuilder sql = new StringBuilder(originalSql);
-        sql.append(" LIMIT ").append(offset).append(",").append(limit);
-        return sql.toString();
+    public DialectModel buildPaginationSql(String originalSql, long offset, long limit) {
+        String sql = originalSql + " LIMIT " + FIRST_MARK + StringPool.COMMA + SECOND_MARK;
+        return new DialectModel(sql, offset, limit).setConsumerChain();
     }
 }

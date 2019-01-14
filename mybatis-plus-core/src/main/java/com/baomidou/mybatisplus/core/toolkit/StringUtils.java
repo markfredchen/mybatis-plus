@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014, hubin (jobob@qq.com).
+ * Copyright (c) 2011-2020, hubin (jobob@qq.com).
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -15,17 +15,19 @@
  */
 package com.baomidou.mybatisplus.core.toolkit;
 
+import com.baomidou.mybatisplus.core.toolkit.sql.StringEscape;
+import com.baomidou.mybatisplus.core.toolkit.support.BiIntFunction;
+
+import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
-import com.baomidou.mybatisplus.core.toolkit.sql.StringEscape;
+import static java.util.stream.Collectors.joining;
 
 /**
  * <p>
@@ -33,14 +35,9 @@ import com.baomidou.mybatisplus.core.toolkit.sql.StringEscape;
  * </p>
  *
  * @author D.Yang
- * @Date 2016-08-18
+ * @since 2016-08-18
  */
 public class StringUtils {
-
-    /**
-     * UTF-8 编码格式
-     */
-    public static final String UTF8 = "UTF-8";
 
     /**
      * 空字符
@@ -50,24 +47,36 @@ public class StringUtils {
      * 字符串 is
      */
     public static final String IS = "is";
-
     /**
      * 下划线字符
      */
     public static final char UNDERLINE = '_';
-
     /**
      * 占位符
      */
     public static final String PLACE_HOLDER = "{%s}";
-
-    private static boolean separatorBeforeDigit = false;
-    private static boolean separatorAfterDigit = true;
-
+    /**
+     * 验证字符串是否是数据库字段
+     */
+    private static final Pattern P_IS_COLUMN = Pattern.compile("^\\w\\S*[\\w\\d]*$");
 
     private StringUtils() {
+        // to do nothing
     }
 
+    /**
+     * 安全的进行字符串 format
+     *
+     * @param target 目标字符串
+     * @param params format 参数
+     * @return format 后的
+     */
+    public static String format(String target, Object... params) {
+        if (target.contains("%s") && ArrayUtils.isNotEmpty(params)) {
+            return String.format(target, params);
+        }
+        return target;
+    }
 
     /**
      * <p>
@@ -75,15 +84,15 @@ public class StringUtils {
      * </p>
      *
      * @param blob Blob 对象
-     * @return
+     * @return 转换后的
      */
     public static String blob2String(Blob blob) {
         if (null != blob) {
             try {
                 byte[] returnValue = blob.getBytes(1, (int) blob.length());
-                return new String(returnValue, UTF8);
+                return new String(returnValue, StandardCharsets.UTF_8);
             } catch (Exception e) {
-                throw new MybatisPlusException("Blob Convert To String Error!");
+                throw ExceptionUtils.mpe("Blob Convert To String Error!");
             }
         }
         return null;
@@ -124,6 +133,18 @@ public class StringUtils {
 
     /**
      * <p>
+     * 判断字符串是否符合数据库字段的命名
+     * </p>
+     *
+     * @param str 字符串
+     * @return 判断结果
+     */
+    public static boolean isNotColumnName(String str) {
+        return !P_IS_COLUMN.matcher(str).matches();
+    }
+
+    /**
+     * <p>
      * 字符串驼峰转下划线格式
      * </p>
      *
@@ -144,6 +165,24 @@ public class StringUtils {
             sb.append(Character.toLowerCase(c));
         }
         return sb.toString();
+    }
+
+    /**
+     * <p>
+     * 解析 getMethodName -> propertyName
+     * </p>
+     *
+     * @param getMethodName 需要解析的
+     * @return 返回解析后的字段名称
+     */
+    public static String resolveFieldName(String getMethodName) {
+        if (getMethodName.startsWith("get")) {
+            getMethodName = getMethodName.substring(3);
+        } else if (getMethodName.startsWith(IS)) {
+            getMethodName = getMethodName.substring(2);
+        }
+        // 小写第一个字母
+        return StringUtils.firstToLowerCase(getMethodName);
     }
 
     /**
@@ -186,10 +225,7 @@ public class StringUtils {
         if (isEmpty(param)) {
             return EMPTY;
         }
-        StringBuilder sb = new StringBuilder(param.length());
-        sb.append(param.substring(0, 1).toLowerCase());
-        sb.append(param.substring(1));
-        return sb.toString();
+        return param.substring(0, 1).toLowerCase() + param.substring(1);
     }
 
     /**
@@ -201,7 +237,7 @@ public class StringUtils {
      * @return
      */
     public static boolean isUpperCase(String str) {
-        return match("^[A-Z]+$", str);
+        return matches("^[A-Z]+$", str);
     }
 
     /**
@@ -210,37 +246,64 @@ public class StringUtils {
      * </p>
      *
      * @param regex 正则表达式字符串
-     * @param str   要匹配的字符串
-     * @return 如果str 符合 regex的正则表达式格式,返回true, 否则返回 false;
+     * @param input 要匹配的字符串
+     * @return 如果 input 符合 regex 正则表达式格式, 返回true, 否则返回 false;
      */
-    public static boolean match(String regex, String str) {
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(str);
-        return matcher.matches();
+    public static boolean matches(String regex, String input) {
+        if (null == regex || null == input) {
+            return false;
+        }
+        return Pattern.matches(regex, input);
     }
 
     /**
+     * MP 内定义的 SQL 占位符表达式，匹配诸如 {0},{1},{2} ... 的形式
+     */
+    public final static Pattern MP_SQL_PLACE_HOLDER = Pattern.compile("[{](?<idx>\\d+)}");
+
+    /**
+     * 替换 SQL 语句中的占位符，例如输入 SELECT * FROM test WHERE id = {0} AND name = {1} 会被替换为
+     * SELECT * FROM test WHERE id = 1 AND name = 'MP'
      * <p>
-     * SQL 参数填充
-     * </p>
+     * 当数组中参数不足时，该方法会抛出错误：数组下标越界{@link ArrayIndexOutOfBoundsException}
      *
      * @param content 填充内容
      * @param args    填充参数
-     * @return
      */
     public static String sqlArgsFill(String content, Object... args) {
-        if (StringUtils.isEmpty(content)) {
-            return null;
-        }
-        if (args != null) {
-            int length = args.length;
-            if (length >= 1) {
-                for (int i = 0; i < length; i++) {
-                    content = content.replace(String.format(PLACE_HOLDER, i), sqlParam(args[i]));
-                }
-            }
+        if (StringUtils.isNotEmpty(content) && ArrayUtils.isNotEmpty(args)) {
+            // 索引不能使用，因为 SQL 中的占位符数字与索引不相同
+            return replace(content, MP_SQL_PLACE_HOLDER, (m, i) -> sqlParam(args[Integer.parseInt(m.group("idx"))])).toString();
         }
         return content;
+    }
+
+    /**
+     * 根据指定的表达式替换字符串中指定格式的部分
+     * <p>
+     * BiIntFunction 中的 第二个 参数将传递 参数在字符串中的索引
+     *
+     * @param src      源字符串
+     * @param ptn      需要替换部分的正则表达式
+     * @param replacer 替换处理器
+     * @return 返回字符串构建起
+     */
+    public static StringBuilder replace(CharSequence src, Pattern ptn, BiIntFunction<Matcher, CharSequence> replacer) {
+        int idx = 0, last = 0, len = src.length();
+        Matcher m = ptn.matcher(src);
+        StringBuilder sb = new StringBuilder();
+
+        // 扫描一次字符串
+        while (m.find()) {
+            sb.append(src, last, m.start()).append(replacer.apply(m, idx++));
+            last = m.end();
+        }
+        // 如果表达式没有匹配或者匹配未到末尾，该判断保证字符串完整性
+        if (last < len) {
+            sb.append(src, last, len);
+        }
+
+        return sb;
     }
 
     /**
@@ -287,38 +350,20 @@ public class StringUtils {
      * @return 单引号包含的原字符串的集合形式
      */
     public static String quotaMarkList(Collection<?> coll) {
-        StringBuilder sqlBuild = new StringBuilder();
-        sqlBuild.append("(");
-        int size = coll.size();
-        int i = 0;
-        Iterator<?> iterator = coll.iterator();
-        while (iterator.hasNext()) {
-            String tempVal = StringUtils.quotaMark(iterator.next());
-            sqlBuild.append(tempVal);
-            if (i + 1 < size) {
-                sqlBuild.append(",");
-            }
-            i++;
-        }
-        sqlBuild.append(")");
-        return sqlBuild.toString();
+        return coll.stream().map(StringUtils::quotaMark)
+            .collect(joining(StringPool.COMMA, StringPool.LEFT_BRACKET, StringPool.RIGHT_BRACKET));
     }
 
     /**
      * <p>
      * 拼接字符串第二个字符串第一个字母大写
      * </p>
-     *
-     * @param concatStr
-     * @param str
-     * @return
      */
     public static String concatCapitalize(String concatStr, final String str) {
         if (isEmpty(concatStr)) {
             concatStr = EMPTY;
         }
-        int strLen;
-        if (str == null || (strLen = str.length()) == 0) {
+        if (str == null || str.length() == 0) {
             return str;
         }
 
@@ -328,11 +373,7 @@ public class StringUtils {
             return str;
         }
 
-        StringBuilder sb = new StringBuilder(strLen);
-        sb.append(concatStr);
-        sb.append(Character.toTitleCase(firstChar));
-        sb.append(str.substring(1));
-        return sb.toString();
+        return concatStr + Character.toTitleCase(firstChar) + str.substring(1);
     }
 
     /**
@@ -413,7 +454,7 @@ public class StringUtils {
      * @return
      */
     public static boolean isMixedMode(String word) {
-        return Pattern.compile(".*[A-Z]+.*").matcher(word).matches() && Pattern.compile(".*[/_]+.*").matcher(word).matches();
+        return matches(".*[A-Z]+.*", word) && matches(".*[/_]+.*", word);
     }
 
     /**
@@ -533,7 +574,7 @@ public class StringUtils {
      */
     public static String[] split(final String str, final String separatorChars) {
         List<String> strings = splitWorker(str, separatorChars, -1, false);
-        return strings.toArray(new String[strings.size()]);
+        return strings.toArray(new String[0]);
     }
 
     /**
@@ -641,11 +682,11 @@ public class StringUtils {
      * 是否为CharSequence类型
      * </p>
      *
-     * @param cls
-     * @return
+     * @param clazz class
+     * @return true 为是 CharSequence 类型
      */
-    public static Boolean isCharSequence(Class<?> cls) {
-        return cls != null && CharSequence.class.isAssignableFrom(cls);
+    public static boolean isCharSequence(Class<?> clazz) {
+        return clazz != null && CharSequence.class.isAssignableFrom(clazz);
     }
 
     /**
@@ -655,7 +696,6 @@ public class StringUtils {
      *
      * @param propertyName 字段名
      * @param propertyType 字段类型
-     * @return
      */
     public static String removeIsPrefixIfBoolean(String propertyName, Class<?> propertyType) {
         if (isBoolean(propertyType) && propertyName.startsWith(IS)) {
@@ -672,29 +712,13 @@ public class StringUtils {
 
     /**
      * <p>
-     * 是否为CharSequence类型
-     * </p>
-     *
-     * @param propertyType
-     * @return
-     */
-    public static Boolean isCharSequence(String propertyType) {
-        try {
-            return isCharSequence(Class.forName(propertyType));
-        } catch (ClassNotFoundException e) {
-            return false;
-        }
-    }
-
-    /**
-     * <p>
      * 是否为Boolean类型(包含普通类型)
      * </p>
      *
      * @param propertyCls
      * @return
      */
-    public static Boolean isBoolean(Class<?> propertyCls) {
+    public static boolean isBoolean(Class<?> propertyCls) {
         return propertyCls != null && (boolean.class.isAssignableFrom(propertyCls) || Boolean.class.isAssignableFrom(propertyCls));
     }
 
@@ -723,7 +747,7 @@ public class StringUtils {
      */
     public static String prefixToLower(String rawString, int index) {
         String beforeChar = rawString.substring(0, index).toLowerCase();
-        String afterChar = rawString.substring(index, rawString.length());
+        String afterChar = rawString.substring(index);
         return beforeChar + afterChar;
     }
 
@@ -739,7 +763,7 @@ public class StringUtils {
      * @return
      */
     public static String removePrefixAfterPrefixToLower(String rawString, int index) {
-        return prefixToLower(rawString.substring(index, rawString.length()), 1);
+        return prefixToLower(rawString.substring(index), 1);
     }
 
     /**
@@ -763,31 +787,28 @@ public class StringUtils {
         StringBuilder buf = new StringBuilder();
         char previousChar = ' ';
         char[] chars = input.toCharArray();
-        for (int i = 0; i < chars.length; i++) {
-            char c = chars[i];
+        for (char c : chars) {
             boolean isUpperCaseAndPreviousIsUpperCase = (Character.isUpperCase(previousChar)) && (Character.isUpperCase(c));
             boolean isUpperCaseAndPreviousIsLowerCase = (Character.isLowerCase(previousChar)) && (Character.isUpperCase(c));
 
             boolean previousIsWhitespace = Character.isWhitespace(previousChar);
             boolean lastOneIsNotUnderscore = (buf.length() > 0) && (buf.charAt(buf.length() - 1) != '_');
             boolean isNotUnderscore = c != '_';
-            if ((lastOneIsNotUnderscore) && ((isUpperCaseAndPreviousIsLowerCase) || (previousIsWhitespace) || ((betweenUpperCases)
-                && (containsLowerCase) && (isUpperCaseAndPreviousIsUpperCase)))) {
-                buf.append("_");
-            } else if (((separatorAfterDigit) && (Character.isDigit(previousChar))
-                && (Character.isLetter(c))) || ((separatorBeforeDigit) && (Character
-                .isDigit(c)) && (Character.isLetter(previousChar)))) {
+            if (lastOneIsNotUnderscore && (isUpperCaseAndPreviousIsLowerCase || previousIsWhitespace
+                || (betweenUpperCases && containsLowerCase && isUpperCaseAndPreviousIsUpperCase))) {
+                buf.append(StringPool.UNDERSCORE);
+            } else if ((Character.isDigit(previousChar) && Character.isLetter(c))) {
                 buf.append('_');
             }
             if ((shouldReplace(c)) && (lastOneIsNotUnderscore)) {
                 buf.append('_');
-            } else if ((!Character.isWhitespace(c)) && ((isNotUnderscore) || (lastOneIsNotUnderscore))) {
+            } else if (!Character.isWhitespace(c) && (isNotUnderscore || lastOneIsNotUnderscore)) {
                 buf.append(Character.toUpperCase(c));
             }
             previousChar = c;
         }
         if (Character.isWhitespace(previousChar)) {
-            buf.append("_");
+            buf.append(StringPool.UNDERSCORE);
         }
         return buf.toString();
     }
@@ -812,7 +833,7 @@ public class StringUtils {
             if ((Character.isWhitespace(lastChar)) && (!Character.isWhitespace(c))
                 && ('-' != c) && (buf.length() > 0)
                 && (buf.charAt(buf.length() - 1) != '-')) {
-                buf.append("-");
+                buf.append(StringPool.DASH);
             }
             if ('_' == c) {
                 buf.append('-');
@@ -824,8 +845,20 @@ public class StringUtils {
             lastChar = c;
         }
         if (Character.isWhitespace(lastChar)) {
-            buf.append("-");
+            buf.append(StringPool.DASH);
         }
         return buf.toString();
+    }
+
+    /**
+     * 从字符串中移除一个单词及随后的一个逗号
+     *
+     * @param s 原字符串
+     * @param p 移除的单词
+     * @return
+     */
+    public static String removeWordWithComma(String s, String p) {
+        String match = "\\s*" + p + "\\s*,{0,1}";
+        return s.replaceAll(match, "");
     }
 }

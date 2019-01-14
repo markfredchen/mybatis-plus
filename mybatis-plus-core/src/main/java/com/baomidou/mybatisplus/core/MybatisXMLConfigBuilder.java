@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014, hubin (jobob@qq.com).
+ * Copyright (c) 2011-2020, hubin (jobob@qq.com).
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -51,6 +51,9 @@ import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.LocalCacheScope;
 import org.apache.ibatis.transaction.TransactionFactory;
 import org.apache.ibatis.type.JdbcType;
+import org.apache.ibatis.type.TypeHandler;
+
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
 
 /**
  * <p>
@@ -59,7 +62,7 @@ import org.apache.ibatis.type.JdbcType;
  * </p>
  *
  * @author hubin
- * @Date 2017-01-04
+ * @since 2017-01-04
  */
 public class MybatisXMLConfigBuilder extends BaseBuilder {
 
@@ -111,6 +114,11 @@ public class MybatisXMLConfigBuilder extends BaseBuilder {
         return configuration;
     }
 
+    @Override
+    public MybatisConfiguration getConfiguration() {
+        return (MybatisConfiguration) this.configuration;
+    }
+
     private void parseConfiguration(XNode root) {
         try {
             //issue #117 read properties first
@@ -151,7 +159,7 @@ public class MybatisXMLConfigBuilder extends BaseBuilder {
     private void loadCustomVfs(Properties props) throws ClassNotFoundException {
         String value = props.getProperty("vfsImpl");
         if (value != null) {
-            String[] clazzes = value.split(",");
+            String[] clazzes = value.split(StringPool.COMMA);
             for (String clazz : clazzes) {
                 if (!clazz.isEmpty()) {
                     @SuppressWarnings("unchecked")
@@ -246,7 +254,7 @@ public class MybatisXMLConfigBuilder extends BaseBuilder {
         }
     }
 
-    private void settingsElement(Properties props) throws Exception {
+    private void settingsElement(Properties props) {
         configuration.setAutoMappingBehavior(AutoMappingBehavior.valueOf(props.getProperty("autoMappingBehavior", "PARTIAL")));
         configuration.setAutoMappingUnknownColumnBehavior(AutoMappingUnknownColumnBehavior.valueOf(props.getProperty("autoMappingUnknownColumnBehavior", "NONE")));
         configuration.setCacheEnabled(booleanValueOf(props.getProperty("cacheEnabled"), true));
@@ -268,6 +276,9 @@ public class MybatisXMLConfigBuilder extends BaseBuilder {
         configuration.setDefaultScriptingLanguage(resolveClass(props.getProperty("defaultScriptingLanguage")));
         configuration.setCallSettersOnNulls(booleanValueOf(props.getProperty("callSettersOnNulls"), false));
         configuration.setUseActualParamName(booleanValueOf(props.getProperty("useActualParamName"), true));
+        @SuppressWarnings("unchecked")
+        Class<? extends TypeHandler> typeHandler = (Class<? extends TypeHandler>) resolveClass(props.getProperty("defaultEnumTypeHandler"));
+        configuration.setDefaultEnumTypeHandler(typeHandler);
         configuration.setReturnInstanceForEmptyRow(booleanValueOf(props.getProperty("returnInstanceForEmptyRow"), false));
         configuration.setLogPrefix(props.getProperty("logPrefix"));
         @SuppressWarnings("unchecked")
@@ -337,7 +348,7 @@ public class MybatisXMLConfigBuilder extends BaseBuilder {
         throw new BuilderException("Environment declaration requires a DataSourceFactory.");
     }
 
-    private void typeHandlerElement(XNode parent) throws Exception {
+    private void typeHandlerElement(XNode parent) {
         if (parent != null) {
             for (XNode child : parent.getChildren()) {
                 if ("package".equals(child.getName())) {
@@ -430,10 +441,9 @@ public class MybatisXMLConfigBuilder extends BaseBuilder {
             throw new BuilderException("No environment specified.");
         } else if (id == null) {
             throw new BuilderException("Environment requires an id attribute.");
-        } else if (environment.equals(id)) {
-            return true;
+        } else {
+            return environment.equals(id);
         }
-        return false;
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014, hubin (jobob@qq.com).
+ * Copyright (c) 2011-2020, hubin (jobob@qq.com).
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -15,7 +15,6 @@
  */
 package com.baomidou.mybatisplus.core;
 
-import org.apache.ibatis.executor.parameter.ParameterHandler;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.scripting.xmltags.XMLLanguageDriver;
@@ -26,12 +25,12 @@ import org.apache.ibatis.scripting.xmltags.XMLLanguageDriver;
  * </p>
  *
  * @author hubin
- * @Date 2016-03-11
+ * @since 2016-03-11
  */
 public class MybatisXMLLanguageDriver extends XMLLanguageDriver {
 
     @Override
-    public ParameterHandler createParameterHandler(MappedStatement mappedStatement, Object parameterObject,
+    public MybatisDefaultParameterHandler createParameterHandler(MappedStatement mappedStatement, Object parameterObject,
                                                    BoundSql boundSql) {
         /* 使用自定义 ParameterHandler */
         return new MybatisDefaultParameterHandler(mappedStatement, parameterObject, boundSql);

@@ -15,9 +15,9 @@
  */
 package com.baomidou.mybatisplus.extension.plugins.pagination.dialects;
 
-
-import com.baomidou.mybatisplus.core.pagination.dialect.IDialect;
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.baomidou.mybatisplus.extension.plugins.pagination.DialectModel;
 
 /**
  * <p>
@@ -25,10 +25,9 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
  * </p>
  *
  * @author hubin
- * @Date 2016-11-10
+ * @since 2016-11-10
  */
 public class SQLServer2005Dialect implements IDialect {
-
 
     private static String getOrderByPart(String sql) {
         String loweredString = sql.toLowerCase();
@@ -36,15 +35,15 @@ public class SQLServer2005Dialect implements IDialect {
         if (orderByIndex != -1) {
             return sql.substring(orderByIndex);
         } else {
-            return "";
+            return StringPool.EMPTY;
         }
     }
 
     @Override
-    public String buildPaginationSql(String originalSql, int offset, int limit) {
+    public DialectModel buildPaginationSql(String originalSql, long offset, long limit) {
         StringBuilder pagingBuilder = new StringBuilder();
         String orderby = getOrderByPart(originalSql);
-        String distinctStr = "";
+        String distinctStr = StringPool.EMPTY;
 
         String loweredString = originalSql.toLowerCase();
         String sqlPartString = originalSql;
@@ -62,15 +61,13 @@ public class SQLServer2005Dialect implements IDialect {
         if (StringUtils.isEmpty(orderby)) {
             orderby = "ORDER BY CURRENT_TIMESTAMP";
         }
-
-        StringBuilder sql = new StringBuilder();
-        sql.append("WITH query AS (SELECT ").append(distinctStr).append("TOP 100 PERCENT ")
-            .append(" ROW_NUMBER() OVER (").append(orderby).append(") as __row_number__, ").append(pagingBuilder)
-            .append(") SELECT * FROM query WHERE __row_number__ BETWEEN ")
+        long firstParam = offset + 1;
+        long secondParam = offset + limit;
+        String sql = "WITH selectTemp AS (SELECT " + distinctStr + "TOP 100 PERCENT " +
+            " ROW_NUMBER() OVER (" + orderby + ") as __row_number__, " + pagingBuilder +
+            ") SELECT * FROM selectTemp WHERE __row_number__ BETWEEN " +
             //FIX#299：原因：mysql中limit 10(offset,size) 是从第10开始（不包含10）,；而这里用的BETWEEN是两边都包含，所以改为offset+1
-            .append(offset + 1)
-            .append(" AND ")
-            .append(offset + limit).append(" ORDER BY __row_number__");
-        return sql.toString();
+            firstParam + " AND " + secondParam + " ORDER BY __row_number__";
+        return new DialectModel(sql, firstParam, secondParam);
     }
 }

@@ -2,13 +2,13 @@ package com.baomidou.mybatisplus.test.generator;
 
 import org.junit.Test;
 
+import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.generator.AutoGenerator;
 import com.baomidou.mybatisplus.generator.config.DataSourceConfig;
 import com.baomidou.mybatisplus.generator.config.GlobalConfig;
 import com.baomidou.mybatisplus.generator.config.PackageConfig;
 import com.baomidou.mybatisplus.generator.config.StrategyConfig;
-import com.baomidou.mybatisplus.generator.config.rules.DbType;
 import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
 
 /**
@@ -17,7 +17,7 @@ import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
  * </p>
  *
  * @author K神
- * @date 2017/12/29
+ * @since 2017/12/29
  */
 public class CodeGeneratorTest {
 
@@ -87,10 +87,11 @@ public class CodeGeneratorTest {
         strategyConfig
             .setCapitalMode(true)
             .setEntityLombokModel(false)
-            .setDbColumnUnderline(true)
+            // .setDbColumnUnderline(true) 改为如下 2 个配置
             .setNaming(NamingStrategy.underline_to_camel)
+            .setColumnNaming(NamingStrategy.underline_to_camel)
             .entityTableFieldAnnotationEnable(enableTableFieldAnnotation)
-            .fieldPrefix(fieldPrefix)//test_id -> id, test_type -> type
+            .setFieldPrefix(fieldPrefix)//test_id -> id, test_type -> type
             .setInclude(tableNames);//修改替换成你需要的表名，多个表名传数组
         config.setActiveRecord(false)
             .setIdType(tableIdType)

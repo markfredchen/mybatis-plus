@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.baomidou.mybatisplus.annotation.DbType;
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.generator.AutoGenerator;
 import com.baomidou.mybatisplus.generator.InjectionConfig;
 import com.baomidou.mybatisplus.generator.config.DataSourceConfig;
@@ -14,8 +16,7 @@ import com.baomidou.mybatisplus.generator.config.PackageConfig;
 import com.baomidou.mybatisplus.generator.config.StrategyConfig;
 import com.baomidou.mybatisplus.generator.config.converts.SqlServerTypeConvert;
 import com.baomidou.mybatisplus.generator.config.po.TableInfo;
-import com.baomidou.mybatisplus.generator.config.rules.DbColumnType;
-import com.baomidou.mybatisplus.generator.config.rules.DbType;
+import com.baomidou.mybatisplus.generator.config.rules.IColumnType;
 import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
 import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
 
@@ -25,7 +26,7 @@ import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
  * </p>
  *
  * @author nieqiurong
- * @Date 2016/12/25
+ * @since 2016/12/25
  */
 public class SQLServerGenerator extends GeneratorTest {
 
@@ -45,6 +46,7 @@ public class SQLServerGenerator extends GeneratorTest {
         gc.setAuthor("nieqiurong");
 
         // 自定义文件命名，注意 %s 会自动填充表实体属性！
+        // gc.setEntityName("%sEntity");
         // gc.setMapperName("%sDao");
         // gc.setXmlName("%sDao");
         // gc.setServiceName("MP%sService");
@@ -58,9 +60,9 @@ public class SQLServerGenerator extends GeneratorTest {
         dsc.setTypeConvert(new SqlServerTypeConvert() {
             // 自定义数据库表字段类型转换【可选】
             @Override
-            public DbColumnType processTypeConvert(String fieldType) {
+            public IColumnType processTypeConvert(GlobalConfig globalConfig, String fieldType) {
                 System.out.println("转换类型：" + fieldType);
-                return super.processTypeConvert(fieldType);
+                return super.processTypeConvert(globalConfig, fieldType);
             }
         });
         dsc.setDriverName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
@@ -118,7 +120,7 @@ public class SQLServerGenerator extends GeneratorTest {
             @Override
             public String outputFile(TableInfo tableInfo) {
                 // 自定义输入文件名称
-                return "D://my_" + tableInfo.getEntityName() + ".java";
+                return "D://my_" + tableInfo.getEntityName() + StringPool.DOT_JAVA;
             }
         });
         cfg.setFileOutConfigList(focList);

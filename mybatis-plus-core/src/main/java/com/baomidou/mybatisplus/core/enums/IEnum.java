@@ -23,13 +23,13 @@ import java.io.Serializable;
  * </p>
  *
  * @author hubin
- * @Date 2017-10-11
+ * @since 2017-10-11
  */
-public interface IEnum {
+public interface IEnum<T extends Serializable> {
 
     /**
      * 枚举数据库存储值
      */
-    Serializable getValue();
+    T getValue();
 
 }

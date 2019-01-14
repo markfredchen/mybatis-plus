@@ -15,6 +15,9 @@
  */
 package com.baomidou.mybatisplus.generator.config.rules;
 
+import java.util.Arrays;
+
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.generator.config.ConstVal;
 
@@ -38,7 +41,7 @@ public enum NamingStrategy {
         // 快速检查
         if (StringUtils.isEmpty(name)) {
             // 没必要转换
-            return "";
+            return StringPool.EMPTY;
         }
         String tempName = name;
         // 大写数字下划线组成转为小写 , 允许混合模式转为小写
@@ -47,13 +50,10 @@ public enum NamingStrategy {
         }
         StringBuilder result = new StringBuilder();
         // 用下划线将原始字符串分割
-        String camels[] = tempName.split(ConstVal.UNDERLINE);
-        for (String camel : camels) {
-            // 跳过原始字符串中开头、结尾的下换线或双重下划线
-            if (StringUtils.isEmpty(camel)) {
-                continue;
-            }
-            // 处理真正的驼峰片段
+        String[] camels = tempName.split(ConstVal.UNDERLINE);
+        // 跳过原始字符串中开头、结尾的下换线或双重下划线
+        // 处理真正的驼峰片段
+        Arrays.stream(camels).filter(camel -> !StringUtils.isEmpty(camel)).forEach(camel -> {
             if (result.length() == 0) {
                 // 第一个驼峰片段，全部字母都小写
                 result.append(camel);
@@ -61,12 +61,14 @@ public enum NamingStrategy {
                 // 其他的驼峰片段，首字母大写
                 result.append(capitalFirst(camel));
             }
-        }
+        });
         return result.toString();
     }
 
     /**
+     * <p>
      * 去掉指定的前缀
+     * </p>
      *
      * @param name
      * @param prefix
@@ -74,43 +76,38 @@ public enum NamingStrategy {
      */
     public static String removePrefix(String name, String... prefix) {
         if (StringUtils.isEmpty(name)) {
-            return "";
+            return StringPool.EMPTY;
         }
         if (null != prefix) {
-            for (String pf : prefix) {
-                if (name.toLowerCase().matches("^" + pf.toLowerCase() + ".*")) {
-                    // 判断是否有匹配的前缀，然后截取前缀
-                    // 删除前缀
-                    return name.substring(pf.length());
-                }
-            }
+            // 判断是否有匹配的前缀，然后截取前缀
+            // 删除前缀
+            return Arrays.stream(prefix).filter(pf -> name.toLowerCase()
+                .matches(StringPool.HAT + pf.toLowerCase() + ".*"))
+                .findFirst().map(pf -> name.substring(pf.length())).orElse(name);
         }
         return name;
     }
 
     /**
+     * <p>
      * 判断是否包含prefix
+     * </p>
      *
      * @param name
      * @param prefix
      * @return
      */
     public static boolean isPrefixContained(String name, String... prefix) {
-        if (StringUtils.isEmpty(name)) {
+        if (null == prefix || StringUtils.isEmpty(name)) {
             return false;
         }
-        if (null != prefix) {
-            for (String pf : prefix) {
-                if (name.toLowerCase().matches("^" + pf.toLowerCase() + ".*")) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return Arrays.stream(prefix).anyMatch(pf -> name.toLowerCase().matches(StringPool.HAT + pf.toLowerCase() + ".*"));
     }
 
     /**
+     * <p>
      * 去掉下划线前缀且将后半部分转成驼峰格式
+     * </p>
      *
      * @param name
      * @param tablePrefix
@@ -121,7 +118,9 @@ public enum NamingStrategy {
     }
 
     /**
+     * <p>
      * 实体首字母大写
+     * </p>
      *
      * @param name 待转换的字符串
      * @return 转换后的字符串
@@ -130,7 +129,7 @@ public enum NamingStrategy {
         if (StringUtils.isNotEmpty(name)) {
             return name.substring(0, 1).toUpperCase() + name.substring(1);
         }
-        return "";
+        return StringPool.EMPTY;
     }
 
 }

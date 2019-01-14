@@ -21,12 +21,12 @@ import java.util.Map;
 
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.SqlSessionUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.baomidou.mybatisplus.core.assist.ISqlRunner;
-import com.baomidou.mybatisplus.core.pagination.Page;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
-import com.baomidou.mybatisplus.core.toolkit.sql.SqlHelper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 
 /**
@@ -35,9 +35,9 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
  * </p>
  *
  * @author Caratacus
- * @Date 2016-12-11
+ * @since 2016-12-11
  */
-public class SqlRunner extends ISqlRunner {
+public class SqlRunner implements ISqlRunner {
 
     // 单例Query
     public static final SqlRunner DEFAULT = new SqlRunner();
@@ -48,7 +48,7 @@ public class SqlRunner extends ISqlRunner {
     private Class<?> clazz;
 
     public SqlRunner() {
-        this.sqlSessionFactory = FACTORY;
+        this.sqlSessionFactory = SqlHelper.FACTORY;
     }
 
     public SqlRunner(Class<?> clazz) {
@@ -65,7 +65,7 @@ public class SqlRunner extends ISqlRunner {
     public static SqlRunner db() {
         // 初始化的静态变量 还是有前后加载的问题 该判断只会执行一次
         if (DEFAULT.sqlSessionFactory == null) {
-            DEFAULT.sqlSessionFactory = FACTORY;
+            DEFAULT.sqlSessionFactory = SqlHelper.FACTORY;
         }
         return DEFAULT;
     }
@@ -83,13 +83,25 @@ public class SqlRunner extends ISqlRunner {
     }
 
     @Transactional
+    @Override
     public boolean insert(String sql, Object... args) {
-        return SqlHelper.retBool(sqlSession().insert(INSERT, sqlMap(sql, args)));
+        SqlSession sqlSession = sqlSession();
+        try {
+            return SqlHelper.retBool(sqlSession.insert(INSERT, sqlMap(sql, args)));
+        }finally {
+            closeSqlSession(sqlSession);
+        }
     }
 
     @Transactional
+    @Override
     public boolean delete(String sql, Object... args) {
-        return SqlHelper.retBool(sqlSession().delete(DELETE, sqlMap(sql, args)));
+        SqlSession sqlSession = sqlSession();
+        try {
+            return SqlHelper.retBool(sqlSession.delete(DELETE, sqlMap(sql, args)));
+        }finally {
+            closeSqlSession(sqlSession);
+        }
     }
 
     /**
@@ -106,8 +118,14 @@ public class SqlRunner extends ISqlRunner {
     }
 
     @Transactional
+    @Override
     public boolean update(String sql, Object... args) {
-        return SqlHelper.retBool(sqlSession().update(UPDATE, sqlMap(sql, args)));
+        SqlSession sqlSession = sqlSession();
+        try {
+            return SqlHelper.retBool(sqlSession.update(UPDATE, sqlMap(sql, args)));
+        }finally {
+            closeSqlSession(sqlSession);
+        }
     }
 
     /**
@@ -118,8 +136,14 @@ public class SqlRunner extends ISqlRunner {
      * @param args 只接受String格式
      * @return
      */
+    @Override
     public List<Map<String, Object>> selectList(String sql, Object... args) {
-        return sqlSession().selectList(SELECT_LIST, sqlMap(sql, args));
+        SqlSession sqlSession = sqlSession();
+        try {
+            return sqlSession().selectList(SELECT_LIST, sqlMap(sql, args));
+        }finally {
+            closeSqlSession(sqlSession);
+        }
     }
 
     /**
@@ -130,8 +154,14 @@ public class SqlRunner extends ISqlRunner {
      * @param args 只接受String格式
      * @return
      */
+    @Override
     public List<Object> selectObjs(String sql, Object... args) {
-        return sqlSession().selectList(SELECT_OBJS, sqlMap(sql, args));
+        SqlSession sqlSession = sqlSession();
+        try {
+            return sqlSession.selectList(SELECT_OBJS, sqlMap(sql, args));
+        }finally {
+            closeSqlSession(sqlSession);
+        }
     }
 
     /**
@@ -142,24 +172,34 @@ public class SqlRunner extends ISqlRunner {
      * @param args 只接受String格式
      * @return
      */
+    @Override
     public Object selectObj(String sql, Object... args) {
         return SqlHelper.getObject(selectObjs(sql, args));
     }
 
+    @Override
     public int selectCount(String sql, Object... args) {
-        return SqlHelper.retCount(sqlSession().<Integer>selectOne(COUNT, sqlMap(sql, args)));
+        SqlSession sqlSession = sqlSession();
+        try {
+            return SqlHelper.retCount(sqlSession.<Integer>selectOne(COUNT, sqlMap(sql, args)));
+        }finally {
+            closeSqlSession(sqlSession);
+        }
     }
 
+    @Override
     public Map<String, Object> selectOne(String sql, Object... args) {
         return SqlHelper.getObject(selectList(sql, args));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public Page<Map<String, Object>> selectPage(Page page, String sql, Object... args) {
+    @Override
+    public IPage<Map<String, Object>> selectPage(IPage page, String sql, Object... args) {
         if (null == page) {
             return null;
         }
-        page.setRecords(sqlSession().selectList(SELECT_LIST, sqlMap(sql, args), page));
+        // TODO 待完成
+      //  page.setRecords(sqlSession().selectList(SELECT_LIST, sqlMap(sql, args), page));
         return page;
     }
 
@@ -169,7 +209,21 @@ public class SqlRunner extends ISqlRunner {
      * <p/>
      */
     private SqlSession sqlSession() {
-        return (clazz != null) ? SqlHelper.sqlSession(clazz) : GlobalConfigUtils.getSqlSession(FACTORY.getConfiguration());
+        return (clazz != null) ? SqlSessionUtils.getSqlSession(GlobalConfigUtils.currentSessionFactory(clazz)) : SqlSessionUtils.getSqlSession(sqlSessionFactory);
+    }
+
+    /**
+     * 释放sqlSession
+     * @param sqlSession session
+     */
+    private void closeSqlSession(SqlSession sqlSession){
+        SqlSessionFactory sqlSessionFactory;
+        if(clazz!=null){
+            sqlSessionFactory = GlobalConfigUtils.currentSessionFactory(clazz);
+        }else {
+            sqlSessionFactory = DEFAULT.sqlSessionFactory;
+        }
+        SqlSessionUtils.closeSqlSession(sqlSession,sqlSessionFactory);
     }
 
 }

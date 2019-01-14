@@ -15,8 +15,7 @@
  */
 package com.baomidou.mybatisplus.extension.plugins.pagination.dialects;
 
-
-import com.baomidou.mybatisplus.core.pagination.dialect.IDialect;
+import com.baomidou.mybatisplus.extension.plugins.pagination.DialectModel;
 
 /**
  * <p>
@@ -24,18 +23,19 @@ import com.baomidou.mybatisplus.core.pagination.dialect.IDialect;
  * </p>
  *
  * @author hubin
- * @Date 2016-11-10
+ * @since 2016-11-10
  */
 public class H2Dialect implements IDialect {
 
-
     @Override
-    public String buildPaginationSql(String originalSql, int offset, int limit) {
-        StringBuilder sql = new StringBuilder(originalSql);
-        sql.append(" limit ").append(limit);
+    public DialectModel buildPaginationSql(String originalSql, long offset, long limit) {
+        String sql = originalSql + " limit " + FIRST_MARK;
+        boolean existOffset = false;
         if (offset > 0) {
-            sql.append(" offset ").append(offset);
+            existOffset = true;
+            sql += (" offset " + SECOND_MARK);
         }
-        return sql.toString();
+        DialectModel model = new DialectModel(sql, limit, offset);
+        return existOffset ? model.setConsumerChain() : model.setConsumer(true);
     }
 }

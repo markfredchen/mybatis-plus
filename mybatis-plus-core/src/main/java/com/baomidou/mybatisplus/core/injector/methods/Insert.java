@@ -15,45 +15,40 @@
  */
 package com.baomidou.mybatisplus.core.injector.methods;
 
-import java.util.List;
-
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.core.enums.SqlMethod;
+import com.baomidou.mybatisplus.core.injector.AbstractMethod;
+import com.baomidou.mybatisplus.core.metadata.TableInfo;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.baomidou.mybatisplus.core.toolkit.TableInfoHelper;
+import com.baomidou.mybatisplus.core.toolkit.sql.SqlScriptUtils;
 import org.apache.ibatis.executor.keygen.Jdbc3KeyGenerator;
 import org.apache.ibatis.executor.keygen.KeyGenerator;
 import org.apache.ibatis.executor.keygen.NoKeyGenerator;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.SqlSource;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.core.enums.SqlMethod;
-import com.baomidou.mybatisplus.core.injector.AbstractMethod;
-import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
-import com.baomidou.mybatisplus.core.metadata.TableInfo;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.baomidou.mybatisplus.core.toolkit.TableInfoHelper;
-
 /**
  * <p>
- * 根据 ID 删除
+ * 插入一条数据（选择字段插入）
  * </p>
  *
  * @author hubin
  * @since 2018-04-06
  */
+@SuppressWarnings("all")
 public class Insert extends AbstractMethod {
 
     @Override
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
         KeyGenerator keyGenerator = new NoKeyGenerator();
-        StringBuilder fieldBuilder = new StringBuilder();
-        StringBuilder placeholderBuilder = new StringBuilder();
         SqlMethod sqlMethod = SqlMethod.INSERT_ONE;
-
-        fieldBuilder.append("\n<trim prefix=\"(\" suffix=\")\" suffixOverrides=\",\">");
-        placeholderBuilder.append("\n<trim prefix=\"(\" suffix=\")\" suffixOverrides=\",\">");
+        String columnScript = SqlScriptUtils.convertTrim(tableInfo.getAllInsertSqlColumnMaybeIf(),
+            LEFT_BRACKET, RIGHT_BRACKET, null, COMMA);
+        String valuesScript = SqlScriptUtils.convertTrim(tableInfo.getAllInsertSqlPropertyMaybeIf(null),
+            LEFT_BRACKET, RIGHT_BRACKET, null, COMMA);
         String keyProperty = null;
         String keyColumn = null;
-
         // 表包含主键处理逻辑,如果不包含主键当普通字段处理
         if (StringUtils.isNotEmpty(tableInfo.getKeyProperty())) {
             if (tableInfo.getIdType() == IdType.AUTO) {
@@ -66,37 +61,10 @@ public class Insert extends AbstractMethod {
                     keyGenerator = TableInfoHelper.genKeyGenerator(tableInfo, builderAssistant, sqlMethod.getMethod(), languageDriver);
                     keyProperty = tableInfo.getKeyProperty();
                     keyColumn = tableInfo.getKeyColumn();
-                    fieldBuilder.append(tableInfo.getKeyColumn()).append(",");
-                    placeholderBuilder.append("#{").append(tableInfo.getKeyProperty()).append("},");
-                } else {
-                    /** 用户输入自定义ID */
-                    fieldBuilder.append(tableInfo.getKeyColumn()).append(",");
-                    // 正常自定义主键策略
-                    placeholderBuilder.append("#{").append(tableInfo.getKeyProperty()).append("},");
                 }
             }
         }
-
-        // 是否 IF 标签判断
-        List<TableFieldInfo> fieldList = tableInfo.getFieldList();
-        for (TableFieldInfo fieldInfo : fieldList) {
-            // 在FieldIgnore,INSERT_UPDATE,INSERT 时设置为false
-            if (FieldFill.INSERT == fieldInfo.getFieldFill()
-                || FieldFill.INSERT_UPDATE == fieldInfo.getFieldFill()) {
-                fieldBuilder.append(fieldInfo.getColumn()).append(",");
-                placeholderBuilder.append("#{").append(fieldInfo.getEl()).append("},");
-            } else {
-                fieldBuilder.append(convertIfTagIgnored(fieldInfo, false));
-                fieldBuilder.append(fieldInfo.getColumn()).append(",");
-                fieldBuilder.append(convertIfTagIgnored(fieldInfo, true));
-                placeholderBuilder.append(convertIfTagIgnored(fieldInfo, false));
-                placeholderBuilder.append("#{").append(fieldInfo.getEl()).append("},");
-                placeholderBuilder.append(convertIfTagIgnored(fieldInfo, true));
-            }
-        }
-        fieldBuilder.append("\n</trim>");
-        placeholderBuilder.append("\n</trim>");
-        String sql = String.format(sqlMethod.getSql(), tableInfo.getTableName(), fieldBuilder.toString(), placeholderBuilder.toString());
+        String sql = String.format(sqlMethod.getSql(), tableInfo.getTableName(), columnScript, valuesScript);
         SqlSource sqlSource = languageDriver.createSqlSource(configuration, sql, modelClass);
         return this.addInsertMappedStatement(mapperClass, modelClass, sqlMethod.getMethod(), sqlSource, keyGenerator, keyProperty, keyColumn);
     }

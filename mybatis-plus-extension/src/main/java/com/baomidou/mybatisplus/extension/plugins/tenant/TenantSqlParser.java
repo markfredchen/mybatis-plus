@@ -17,14 +17,23 @@ package com.baomidou.mybatisplus.extension.plugins.tenant;
 
 import java.util.List;
 
-import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
 import com.baomidou.mybatisplus.core.parser.AbstractJsqlParser;
+import com.baomidou.mybatisplus.core.toolkit.Assert;
+import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
 
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.Accessors;
 import net.sf.jsqlparser.expression.BinaryExpression;
 import net.sf.jsqlparser.expression.Expression;
+import net.sf.jsqlparser.expression.Parenthesis;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
+import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
 import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
 import net.sf.jsqlparser.expression.operators.relational.ExpressionList;
+import net.sf.jsqlparser.expression.operators.relational.ItemsList;
+import net.sf.jsqlparser.expression.operators.relational.MultiExpressionList;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
 import net.sf.jsqlparser.statement.delete.Delete;
@@ -44,12 +53,15 @@ import net.sf.jsqlparser.statement.update.Update;
 
 /**
  * <p>
- * 租户 SQL 解析（ TenantId 行级 ）
+ * 租户 SQL 解析器（ TenantId 行级 ）
  * </p>
  *
  * @author hubin
  * @since 2017-09-01
  */
+@Data
+@Accessors(chain = true)
+@EqualsAndHashCode(callSuper = true)
 public class TenantSqlParser extends AbstractJsqlParser {
 
     private TenantHandler tenantHandler;
@@ -69,10 +81,7 @@ public class TenantSqlParser extends AbstractJsqlParser {
         } else {
             SetOperationList operationList = (SetOperationList) selectBody;
             if (operationList.getSelects() != null && operationList.getSelects().size() > 0) {
-                List<SelectBody> plainSelects = operationList.getSelects();
-                for (SelectBody plainSelect : plainSelects) {
-                    processSelectBody(plainSelect);
-                }
+                operationList.getSelects().forEach(this::processSelectBody);
             }
         }
     }
@@ -84,17 +93,23 @@ public class TenantSqlParser extends AbstractJsqlParser {
      */
     @Override
     public void processInsert(Insert insert) {
-        if (this.tenantHandler.doTableFilter(insert.getTable().getName())) {
+        if (tenantHandler.doTableFilter(insert.getTable().getName())) {
             // 过滤退出执行
             return;
         }
-        insert.getColumns().add(new Column(this.tenantHandler.getTenantIdColumn()));
+        insert.getColumns().add(new Column(tenantHandler.getTenantIdColumn()));
         if (insert.getSelect() != null) {
             processPlainSelect((PlainSelect) insert.getSelect().getSelectBody(), true);
         } else if (insert.getItemsList() != null) {
-            ((ExpressionList) insert.getItemsList()).getExpressions().add(tenantHandler.getTenantId());
+            // fixed github pull/295
+            ItemsList itemsList = insert.getItemsList();
+            if (itemsList instanceof MultiExpressionList) {
+                ((MultiExpressionList) itemsList).getExprList().forEach(el -> el.getExpressions().add(tenantHandler.getTenantId()));
+            } else {
+                ((ExpressionList) insert.getItemsList()).getExpressions().add(tenantHandler.getTenantId());
+            }
         } else {
-            throw new MybatisPlusException("Failed to process multiple-table update, please exclude the tableName or statementId");
+            throw ExceptionUtils.mpe("Failed to process multiple-table update, please exclude the tableName or statementId");
         }
     }
 
@@ -106,11 +121,10 @@ public class TenantSqlParser extends AbstractJsqlParser {
     @Override
     public void processUpdate(Update update) {
         List<Table> tableList = update.getTables();
-        if (null == tableList || tableList.size() >= 2) {
-            throw new MybatisPlusException("Failed to process multiple-table update, please exclude the statementId");
-        }
+        Assert.isTrue(null != tableList && tableList.size() < 2,
+            "Failed to process multiple-table update, please exclude the statementId");
         Table table = tableList.get(0);
-        if (this.tenantHandler.doTableFilter(table.getName())) {
+        if (tenantHandler.doTableFilter(table.getName())) {
             // 过滤退出执行
             return;
         }
@@ -124,7 +138,7 @@ public class TenantSqlParser extends AbstractJsqlParser {
      */
     @Override
     public void processDelete(Delete delete) {
-        if (this.tenantHandler.doTableFilter(delete.getTable().getName())) {
+        if (tenantHandler.doTableFilter(delete.getTable().getName())) {
             // 过滤退出执行
             return;
         }
@@ -139,13 +153,15 @@ public class TenantSqlParser extends AbstractJsqlParser {
     protected BinaryExpression andExpression(Table table, Expression where) {
         //获得where条件表达式
         EqualsTo equalsTo = new EqualsTo();
-        if (null != where) {
-            equalsTo.setLeftExpression(new Column(this.tenantHandler.getTenantIdColumn()));
-            equalsTo.setRightExpression(tenantHandler.getTenantId());
-            return new AndExpression(equalsTo, where);
-        }
         equalsTo.setLeftExpression(this.getAliasColumn(table));
         equalsTo.setRightExpression(tenantHandler.getTenantId());
+        if (null != where) {
+            if (where instanceof OrExpression) {
+                return new AndExpression(equalsTo, new Parenthesis(where));
+            } else {
+                return new AndExpression(equalsTo, where);
+            }
+        }
         return equalsTo;
     }
 
@@ -170,23 +186,23 @@ public class TenantSqlParser extends AbstractJsqlParser {
         FromItem fromItem = plainSelect.getFromItem();
         if (fromItem instanceof Table) {
             Table fromTable = (Table) fromItem;
-            if (this.tenantHandler.doTableFilter(fromTable.getName())) {
+            if (tenantHandler.doTableFilter(fromTable.getName())) {
                 // 过滤退出执行
                 return;
             }
             plainSelect.setWhere(builderExpression(plainSelect.getWhere(), fromTable));
             if (addColumn) {
-                plainSelect.getSelectItems().add(new SelectExpressionItem(new Column(this.tenantHandler.getTenantIdColumn())));
+                plainSelect.getSelectItems().add(new SelectExpressionItem(new Column(tenantHandler.getTenantIdColumn())));
             }
         } else {
             processFromItem(fromItem);
         }
         List<Join> joins = plainSelect.getJoins();
         if (joins != null && joins.size() > 0) {
-            for (Join join : joins) {
-                processJoin(join);
-                processFromItem(join.getRightItem());
-            }
+            joins.forEach(j -> {
+                processJoin(j);
+                processFromItem(j.getRightItem());
+            });
         }
     }
 
@@ -196,8 +212,8 @@ public class TenantSqlParser extends AbstractJsqlParser {
     protected void processFromItem(FromItem fromItem) {
         if (fromItem instanceof SubJoin) {
             SubJoin subJoin = (SubJoin) fromItem;
-            if (subJoin.getJoin() != null) {
-                processJoin(subJoin.getJoin());
+            if (subJoin.getJoinList() != null) {
+                subJoin.getJoinList().forEach(this::processJoin);
             }
             if (subJoin.getLeft() != null) {
                 processFromItem(subJoin.getLeft());
@@ -255,34 +271,32 @@ public class TenantSqlParser extends AbstractJsqlParser {
                     processFromItem((FromItem) binaryExpression.getRightExpression());
                 }
             }
-            return new AndExpression(equalsTo, expression);
+            if (expression instanceof OrExpression) {
+                return new AndExpression(equalsTo, new Parenthesis(expression));
+            } else {
+                return new AndExpression(equalsTo, expression);
+            }
         }
     }
 
     /**
      * <p>
-     * 字段是否添加别名设置
+     * 租户字段别名设置<br>
+     * tableName.tenantId 或 tableAlias.tenantId
      * </p>
      *
      * @param table 表对象
      * @return 字段
      */
     protected Column getAliasColumn(Table table) {
-        if (null == table.getAlias()) {
-            return new Column(this.tenantHandler.getTenantIdColumn());
-        }
         StringBuilder column = new StringBuilder();
-        column.append(table.getAlias().getName());
-        column.append(".");
-        column.append(this.tenantHandler.getTenantIdColumn());
+        if (null == table.getAlias()) {
+            column.append(table.getName());
+        } else {
+            column.append(table.getAlias().getName());
+        }
+        column.append(StringPool.DOT);
+        column.append(tenantHandler.getTenantIdColumn());
         return new Column(column.toString());
-    }
-
-    public TenantHandler getTenantHandler() {
-        return tenantHandler;
-    }
-
-    public void setTenantHandler(TenantHandler tenantHandler) {
-        this.tenantHandler = tenantHandler;
     }
 }

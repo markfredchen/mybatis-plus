@@ -14,7 +14,7 @@ import ${superControllerClassPackage};
 
 /**
  * <p>
- * ${table.comment} 前端控制器
+ * ${table.comment!} 前端控制器
  * </p>
  *
  * @author ${author}
@@ -33,7 +33,7 @@ class ${table.controllerName}<#if superControllerClass??> : ${superControllerCla
 public class ${table.controllerName} extends ${superControllerClass} {
 <#else>
 public class ${table.controllerName} {
+</#if>
 
 }
-</#if>
 </#if>

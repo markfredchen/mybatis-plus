@@ -15,21 +15,19 @@
  */
 package com.baomidou.mybatisplus.extension.spring;
 
-import static org.springframework.util.Assert.notNull;
-import static org.springframework.util.Assert.state;
-import static org.springframework.util.ObjectUtils.isEmpty;
-import static org.springframework.util.StringUtils.hasLength;
-import static org.springframework.util.StringUtils.tokenizeToStringArray;
-
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.HashSet;
-import java.util.Properties;
-import java.util.Set;
-
-import javax.sql.DataSource;
-
+import com.baomidou.mybatisplus.annotation.DbType;
+import com.baomidou.mybatisplus.annotation.EnumValue;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.MybatisXMLConfigBuilder;
+import com.baomidou.mybatisplus.core.config.GlobalConfig;
+import com.baomidou.mybatisplus.core.enums.IEnum;
+import com.baomidou.mybatisplus.core.toolkit.*;
+import com.baomidou.mybatisplus.extension.handlers.EnumAnnotationTypeHandler;
+import com.baomidou.mybatisplus.extension.handlers.EnumTypeHandler;
+import com.baomidou.mybatisplus.extension.toolkit.AopUtils;
+import com.baomidou.mybatisplus.extension.toolkit.JdbcUtils;
+import com.baomidou.mybatisplus.extension.toolkit.PackageHelper;
+import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
 import org.apache.ibatis.cache.Cache;
 import org.apache.ibatis.executor.ErrorContext;
@@ -45,6 +43,7 @@ import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.apache.ibatis.session.SqlSessionFactoryBuilder;
 import org.apache.ibatis.transaction.TransactionFactory;
+import org.apache.ibatis.type.EnumOrdinalTypeHandler;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 import org.mybatis.spring.SqlSessionFactoryBean;
@@ -59,15 +58,18 @@ import org.springframework.core.NestedIOException;
 import org.springframework.core.io.Resource;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 
-import com.baomidou.mybatisplus.core.MybatisConfiguration;
-import com.baomidou.mybatisplus.core.MybatisXMLConfigBuilder;
-import com.baomidou.mybatisplus.core.enums.IEnum;
-import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
-import com.baomidou.mybatisplus.core.metadata.GlobalConfiguration;
-import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
-import com.baomidou.mybatisplus.extension.toolkit.JdbcUtils;
-import com.baomidou.mybatisplus.extension.toolkit.PackageHelper;
-import com.baomidou.mybatisplus.extension.toolkit.SqlRunner;
+import javax.sql.DataSource;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.*;
+
+import static org.springframework.util.Assert.notNull;
+import static org.springframework.util.Assert.state;
+import static org.springframework.util.ObjectUtils.isEmpty;
+import static org.springframework.util.StringUtils.hasLength;
+import static org.springframework.util.StringUtils.tokenizeToStringArray;
 
 /**
  * <p>
@@ -76,7 +78,7 @@ import com.baomidou.mybatisplus.extension.toolkit.SqlRunner;
  * </p>
  *
  * @author hubin
- * @Date 2017-01-04
+ * @since 2017-01-04
  */
 public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFactory>, InitializingBean, ApplicationListener<ApplicationEvent> {
 
@@ -84,7 +86,7 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
 
     private Resource configLocation;
 
-    private Configuration configuration;
+    private MybatisConfiguration configuration;
 
     private Resource[] mapperLocations;
 
@@ -129,10 +131,10 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
 
     private ObjectWrapperFactory objectWrapperFactory;
 
-    private GlobalConfiguration globalConfig = GlobalConfigUtils.defaults();
+    private GlobalConfig globalConfig;
 
     // TODO 注入全局配置
-    public void setGlobalConfig(GlobalConfiguration globalConfig) {
+    public void setGlobalConfig(GlobalConfig globalConfig) {
         this.globalConfig = globalConfig;
     }
 
@@ -204,10 +206,8 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
     }
 
     /**
-     * Packages to search for type aliases.
-     *
-     * @param typeAliasesPackage package to scan for domain objects
-     * @since 1.0.1
+     * 支持 typeAliasesPackage 多项每项都有通配符 com.a.b.*.po, com.c.*.po
+     * ISSUE https://gitee.com/baomidou/mybatis-plus/issues/IKJ48
      */
     public void setTypeAliasesPackage(String typeAliasesPackage) {
         this.typeAliasesPackage = typeAliasesPackage;
@@ -284,7 +284,7 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
      * @param configuration MyBatis configuration
      * @since 1.3.0
      */
-    public void setConfiguration(Configuration configuration) {
+    public void setConfiguration(MybatisConfiguration configuration) {
         this.configuration = configuration;
     }
 
@@ -400,7 +400,7 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
      */
     protected SqlSessionFactory buildSqlSessionFactory() throws Exception {
 
-        Configuration configuration;
+        MybatisConfiguration configuration;
 
         // TODO 加载自定义 MybatisXmlConfigBuilder
         MybatisXMLConfigBuilder xmlConfigBuilder = null;
@@ -425,6 +425,17 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
             }
         }
 
+        // TODO 无配置启动所必须的
+        if (this.globalConfig == null) {
+            this.globalConfig = GlobalConfigUtils.defaults();
+        }
+        if (this.globalConfig.getDbConfig() == null) {
+            this.globalConfig.setDbConfig(new GlobalConfig.DbConfig());
+        }
+
+        // TODO 初始化 id-work 以及 打印骚东西
+        configuration.init(this.globalConfig);
+
         if (this.objectFactory != null) {
             configuration.setObjectFactory(this.objectFactory);
         }
@@ -439,18 +450,30 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
 
         if (hasLength(this.typeAliasesPackage)) {
             // TODO 支持自定义通配符
-            String[] typeAliasPackageArray;
-            if (typeAliasesPackage.contains("*") && !typeAliasesPackage.contains(",")
-                && !typeAliasesPackage.contains(";")) {
-                typeAliasPackageArray = PackageHelper.convertTypeAliasesPackage(typeAliasesPackage);
+            List<String> typeAliasPackageList = new ArrayList<>();
+            if (typeAliasesPackage.contains(StringPool.ASTERISK) && !typeAliasesPackage.contains(StringPool.COMMA) && !typeAliasesPackage.contains(StringPool.SEMICOLON)) {
+                String[] convertTypeAliasesPackages = PackageHelper.convertTypeAliasesPackage(this.typeAliasesPackage);
+                if (ArrayUtils.isEmpty(convertTypeAliasesPackages)) {
+                    LOGGER.warn("Can't find class in '[" + this.typeAliasesPackage + "]' package. Please check your configuration.");
+                } else {
+                    typeAliasPackageList.addAll(Arrays.asList(convertTypeAliasesPackages));
+                }
             } else {
-                typeAliasPackageArray = tokenizeToStringArray(this.typeAliasesPackage,
-                    ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS);
+                String[] typeAliasPackageArray = tokenizeToStringArray(this.typeAliasesPackage, ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS);
+                for (String one : typeAliasPackageArray) {
+                    if (one.contains(StringPool.ASTERISK)) {
+                        String[] convertTypeAliasesPackages = PackageHelper.convertTypeAliasesPackage(one);
+                        if (ArrayUtils.isEmpty(convertTypeAliasesPackages)) {
+                            LOGGER.warn("Can't find class in '[" + one + "]' package. Please check your configuration.");
+                        } else {
+                            typeAliasPackageList.addAll(Arrays.asList(convertTypeAliasesPackages));
+                        }
+                    } else {
+                        typeAliasPackageList.add(one);
+                    }
+                }
             }
-            if (typeAliasPackageArray == null) {
-                throw new MybatisPlusException("not find typeAliasesPackage:" + typeAliasesPackage);
-            }
-            for (String packageToScan : typeAliasPackageArray) {
+            for (String packageToScan : typeAliasPackageList) {
                 configuration.getTypeAliasRegistry().registerAliases(packageToScan,
                     typeAliasesSuperType == null ? Object.class : typeAliasesSuperType);
                 if (LOGGER.isDebugEnabled()) {
@@ -461,19 +484,25 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
 
         // TODO 自定义枚举类扫描处理
         if (hasLength(this.typeEnumsPackage)) {
-            Set<Class> classes = null;
-            if (typeEnumsPackage.contains("*") && !typeEnumsPackage.contains(",")
-                && !typeEnumsPackage.contains(";")) {
+            Set<Class> classes;
+            if (typeEnumsPackage.contains(StringPool.STAR) && !typeEnumsPackage.contains(StringPool.COMMA)
+                && !typeEnumsPackage.contains(StringPool.SEMICOLON)) {
                 classes = PackageHelper.scanTypePackage(typeEnumsPackage);
+                if (classes.isEmpty()) {
+                    LOGGER.warn("Can't find class in '[" + typeEnumsPackage + "]' package. Please check your configuration.");
+                }
             } else {
                 String[] typeEnumsPackageArray = tokenizeToStringArray(this.typeEnumsPackage,
                     ConfigurableApplicationContext.CONFIG_LOCATION_DELIMITERS);
-                if (typeEnumsPackageArray == null) {
-                    throw new MybatisPlusException("not find typeEnumsPackage:" + typeEnumsPackage);
-                }
-                classes = new HashSet<Class>();
+                Assert.notNull(typeEnumsPackageArray, "not find typeEnumsPackage:" + typeEnumsPackage);
+                classes = new HashSet<>();
                 for (String typePackage : typeEnumsPackageArray) {
-                    classes.addAll(PackageHelper.scanTypePackage(typePackage));
+                    Set<Class> scanTypePackage = PackageHelper.scanTypePackage(typePackage);
+                    if (scanTypePackage.isEmpty()) {
+                        LOGGER.warn("Can't find class in '[" + typePackage + "]' package. Please check your configuration.");
+                    } else {
+                        classes.addAll(PackageHelper.scanTypePackage(typePackage));
+                    }
                 }
             }
             // 取得类型转换注册器
@@ -481,10 +510,17 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
             for (Class cls : classes) {
                 if (cls.isEnum()) {
                     if (IEnum.class.isAssignableFrom(cls)) {
-                        typeHandlerRegistry.register(cls.getName(), com.baomidou.mybatisplus.extension.handlers.EnumTypeHandler.class.getCanonicalName());
+                        // 接口方式
+                        typeHandlerRegistry.register(cls, EnumTypeHandler.class);
                     } else {
-                        // 使用原生 EnumOrdinalTypeHandler
-                        typeHandlerRegistry.register(cls.getName(), org.apache.ibatis.type.EnumOrdinalTypeHandler.class.getCanonicalName());
+                        // 注解方式
+                        Class<?> clazz = dealEnumType(cls);
+                        if (null != clazz) {
+                            typeHandlerRegistry.register(cls, EnumAnnotationTypeHandler.class);
+                        } else {
+                            // 原生方式
+                            registerOriginalEnumTypeHandler(typeHandlerRegistry, cls);
+                        }
                     }
                 }
             }
@@ -559,22 +595,23 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
         }
 
         configuration.setEnvironment(new Environment(this.environment, this.transactionFactory, this.dataSource));
-        // 设置元数据相关
-//        GlobalConfigUtils.setMetaData(dataSource, globalConfig);
-        try (Connection connection = dataSource.getConnection()) {
-            // 设置全局关键字
-            globalConfig.setSqlKeywords(connection.getMetaData().getSQLKeywords());
-            globalConfig.setDbType(JdbcUtils.getDbType(connection.getMetaData().getURL()));
-        } catch (Exception e) {
-            throw new MybatisPlusException("Error: GlobalConfigUtils setMetaData Fail !  Cause:" + e);
+
+        // TODO 设置元数据相关 如果用户没有配置 dbType 则自动获取
+        if (globalConfig.getDbConfig().getDbType() == DbType.OTHER) {
+            try (Connection connection = AopUtils.getTargetObject(this.dataSource).getConnection()) {
+                globalConfig.getDbConfig().setDbType(JdbcUtils.getDbType(connection.getMetaData().getURL()));
+            } catch (Exception e) {
+                throw ExceptionUtils.mpe("Error: GlobalConfigUtils setMetaData Fail !  Cause:" + e);
+            }
         }
         SqlSessionFactory sqlSessionFactory = this.sqlSessionFactoryBuilder.build(configuration);
+
         // TODO SqlRunner
-        SqlRunner.FACTORY = sqlSessionFactory;
-        // TODO 缓存 sqlSessionFactory
-        globalConfig.setSqlSessionFactory(sqlSessionFactory);
-        // TODO 设置全局参数属性
+        SqlHelper.FACTORY = sqlSessionFactory;
+
+        // TODO 设置全局参数属性 以及 缓存 sqlSessionFactory
         globalConfig.signGlobalConfig(sqlSessionFactory);
+
         if (!isEmpty(this.mapperLocations)) {
             if (globalConfig.isRefresh()) {
                 //TODO 设置自动刷新配置 减少配置
@@ -610,6 +647,36 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
     }
 
     /**
+     * 处理普通枚举
+     * 把带{@link EnumValue}的field注册到处理器中
+     *
+     * @param clazz
+     */
+    protected Class<?> dealEnumType(Class<?> clazz) {
+        if (clazz.isEnum()) {
+            Field[] fields = clazz.getDeclaredFields();
+            for (Field f : fields) {
+                if (f.isAnnotationPresent(EnumValue.class)) {
+                    f.setAccessible(true);
+                    EnumAnnotationTypeHandler.addEnumType(clazz, f);
+                    return clazz;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 对原生枚举的处理类，默认{@link EnumOrdinalTypeHandler}
+     *
+     * @param typeHandlerRegistry
+     * @param enumClazz
+     */
+    protected void registerOriginalEnumTypeHandler(TypeHandlerRegistry typeHandlerRegistry, Class<?> enumClazz) {
+        typeHandlerRegistry.register(enumClazz, EnumOrdinalTypeHandler.class);
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
@@ -617,7 +684,6 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
         if (this.sqlSessionFactory == null) {
             afterPropertiesSet();
         }
-
         return this.sqlSessionFactory;
     }
 

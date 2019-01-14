@@ -4,20 +4,16 @@ import com.baomidou.mybatisplus.core.incrementer.IKeyGenerator;
 
 /**
  * <p>
- * Postgre Sequence
+ * Postgres Sequence
  * </p>
  *
  * @author Caratacus
- * @Date 2017-06-12
+ * @since 2017-06-12
  */
 public class PostgreKeyGenerator implements IKeyGenerator {
 
     @Override
     public String executeSql(String incrementerName) {
-        StringBuilder sql = new StringBuilder();
-        sql.append("select nextval('");
-        sql.append(incrementerName);
-        sql.append("')");
-        return sql.toString();
+        return "select nextval('" + incrementerName + "')";
     }
 }

@@ -16,6 +16,10 @@
 package com.baomidou.mybatisplus.core.toolkit;
 
 
+import java.lang.reflect.Field;
+import java.math.BigDecimal;
+import java.util.Objects;
+
 import com.baomidou.mybatisplus.core.enums.IEnum;
 
 /**
@@ -24,7 +28,7 @@ import com.baomidou.mybatisplus.core.enums.IEnum;
  * </p>
  *
  * @author hubin
- * @Date 2017-10-11
+ * @since 2017-10-11
  */
 public class EnumUtils {
 
@@ -41,16 +45,32 @@ public class EnumUtils {
     public static <E extends Enum<?> & IEnum> E valueOf(Class<E> enumClass, Object value) {
         E[] es = enumClass.getEnumConstants();
         for (E e : es) {
-            if (e.getValue() == value) {
-                // 基本类型
+            Object evalue = e.getValue();
+            if (value instanceof Number && evalue instanceof Number
+                && new BigDecimal(String.valueOf(value)).compareTo(new BigDecimal(String.valueOf(evalue))) == 0) {
                 return e;
-            } else if (value instanceof Number) {
-                if (e.getValue() instanceof Number &&
-                    ((Number) value).doubleValue() == ((Number) e.getValue()).doubleValue()) {
+            }
+            if (Objects.equals(evalue, value)) {
+                return e;
+            }
+        }
+        return null;
+    }
+
+    public static <E extends Enum<?>> E valueOf(Class<E> enumClass, Object value, Field enumField) {
+        E[] es = enumClass.getEnumConstants();
+        for (E e : es) {
+            try {
+                Object evalue = enumField.get(e);
+                if (value instanceof Number && evalue instanceof Number
+                    && new BigDecimal(String.valueOf(value)).compareTo(new BigDecimal(String.valueOf(evalue))) == 0) {
                     return e;
                 }
-            } else if (String.valueOf(value).equals(String.valueOf(e.getValue()))) {
-                return e;
+                if (Objects.equals(evalue, value)) {
+                    return e;
+                }
+            } catch (IllegalAccessException ignored) {
+
             }
         }
         return null;

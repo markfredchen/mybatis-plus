@@ -15,23 +15,14 @@
  */
 package com.baomidou.mybatisplus.extension.plugins.pagination.dialects;
 
-
-import com.baomidou.mybatisplus.core.pagination.dialect.IDialect;
-
 /**
  * <p>
  * MariaDB 数据库分页语句组装实现
  * </p>
  *
  * @author Caratacus
- * @Date 2018-04-24
+ * @since 2018-04-24
  */
-public class MariaDBDialect implements IDialect {
+public class MariaDBDialect extends MySqlDialect {
 
-    @Override
-    public String buildPaginationSql(String originalSql, int offset, int limit) {
-        StringBuilder sql = new StringBuilder(originalSql);
-        sql.append(" LIMIT ").append(offset).append(",").append(limit);
-        return sql.toString();
-    }
 }

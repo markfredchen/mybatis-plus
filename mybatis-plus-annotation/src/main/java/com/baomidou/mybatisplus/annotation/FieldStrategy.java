@@ -21,44 +21,25 @@ package com.baomidou.mybatisplus.annotation;
  * </p>
  *
  * @author hubin
- * @Date 2016-09-09
+ * @since 2016-09-09
  */
 public enum FieldStrategy {
-    IGNORED(0, "忽略判断"),
-    NOT_NULL(1, "非 NULL 判断"),
-    NOT_EMPTY(2, "非空判断");
-
     /**
-     * 主键
+     * 忽略判断
      */
-    private final int key;
-
+    IGNORED,
     /**
-     * 描述
+     * 非NULL判断
      */
-    private final String desc;
-
-    FieldStrategy(final int key, final String desc) {
-        this.key = key;
-        this.desc = desc;
-    }
-
-    public static FieldStrategy getFieldStrategy(int key) {
-        FieldStrategy[] fss = FieldStrategy.values();
-        for (FieldStrategy fs : fss) {
-            if (fs.getKey() == key) {
-                return fs;
-            }
-        }
-        return FieldStrategy.NOT_NULL;
-    }
-
-    public int getKey() {
-        return this.key;
-    }
-
-    public String getDesc() {
-        return this.desc;
-    }
-
+    NOT_NULL,
+    /**
+     * 非空判断
+     */
+    NOT_EMPTY,
+    /**
+     * 默认的,一般只用于注解里
+     * 1. 在全局里代表 NOT_NULL
+     * 2. 在注解里代表 跟随全局
+     */
+    DEFAULT
 }

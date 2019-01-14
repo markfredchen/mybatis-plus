@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.baomidou.mybatisplus.annotation.DbType;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.generator.AutoGenerator;
 import com.baomidou.mybatisplus.generator.InjectionConfig;
 import com.baomidou.mybatisplus.generator.config.DataSourceConfig;
@@ -14,8 +17,7 @@ import com.baomidou.mybatisplus.generator.config.PackageConfig;
 import com.baomidou.mybatisplus.generator.config.StrategyConfig;
 import com.baomidou.mybatisplus.generator.config.converts.OracleTypeConvert;
 import com.baomidou.mybatisplus.generator.config.po.TableInfo;
-import com.baomidou.mybatisplus.generator.config.rules.DbColumnType;
-import com.baomidou.mybatisplus.generator.config.rules.DbType;
+import com.baomidou.mybatisplus.generator.config.rules.IColumnType;
 import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
 import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
 
@@ -25,7 +27,7 @@ import com.baomidou.mybatisplus.generator.engine.FreemarkerTemplateEngine;
  * </p>
  *
  * @author nieqiurong
- * @Date 2016/12/25
+ * @since 2016/12/25
  */
 public class PostgreSQLGenerator extends GeneratorTest {
 
@@ -41,10 +43,13 @@ public class PostgreSQLGenerator extends GeneratorTest {
         gc.setEnableCache(false);// XML 二级缓存
         gc.setBaseResultMap(true);// XML ResultMap
         gc.setBaseColumnList(false);// XML columList
-        //gc.setKotlin(true) 是否生成 kotlin 代码
+        //gc.setKotlin(true); // 是否生成 kotlin 代码
+        //gc.setSwagger2(true); // 是否生成 Swagger2 注解
         gc.setAuthor("hubin");
+        gc.setIdType(IdType.AUTO);
 
         // 自定义文件命名，注意 %s 会自动填充表实体属性！
+        // gc.setEntityName("%sEntity");
         // gc.setMapperName("%sDao");
         // gc.setXmlName("%sDao");
         // gc.setServiceName("MP%sService");
@@ -54,14 +59,14 @@ public class PostgreSQLGenerator extends GeneratorTest {
 
         // 数据源配置
         DataSourceConfig dsc = new DataSourceConfig();
-        dsc.setSchemaname("public");// 指定 SCHEMA
+        dsc.setSchemaName("public");// 指定 SCHEMA
         dsc.setDbType(DbType.POSTGRE_SQL);
         dsc.setTypeConvert(new OracleTypeConvert() {
             // 自定义数据库表字段类型转换【可选】
             @Override
-            public DbColumnType processTypeConvert(String fieldType) {
+            public IColumnType processTypeConvert(GlobalConfig globalConfig, String fieldType) {
                 System.out.println("转换类型：" + fieldType);
-                return super.processTypeConvert(fieldType);
+                return super.processTypeConvert(globalConfig, fieldType);
             }
         });
         // 自定义数据库信息查询
@@ -75,13 +80,13 @@ public class PostgreSQLGenerator extends GeneratorTest {
         // 策略配置
         StrategyConfig strategy = new StrategyConfig();
         // strategy.setCapitalMode(true);// 全局大写命名
-        // strategy.setDbColumnUnderline(true);//全局下划线命名
-        strategy.setTablePrefix(new String[]{"bmd_", "mp_"});// 此处可以修改为您的表前缀
-        strategy.setFieldPrefix(new String[]{"A_"});
+        // strategy.setDbColumnUnderline(true);// 全局下划线命名
+        strategy.setTablePrefix("bmd_", "mp_");// 表前缀
+        strategy.setFieldPrefix("A_");
         strategy.setNaming(NamingStrategy.underline_to_camel);// 表名生成策略
         strategy.setColumnNaming(NamingStrategy.underline_to_camel);// 允许字段策略独立设置，默认为 naming 策略
-        // strategy.setInclude(new String[] { "user" }); // 需要生成的表
-        // strategy.setExclude(new String[]{"test"}); // 排除生成的表
+        strategy.setInclude("sys_user", "^mp.*", "ok"); // 需要生成的表，支持正则表达式
+        // strategy.setExclude("test"); // 排除生成的表，支持正则表达式
         // 自定义实体父类
         // strategy.setSuperEntityClass("com.baomidou.demo.TestEntity");
         // 自定义实体，公共字段
@@ -123,7 +128,7 @@ public class PostgreSQLGenerator extends GeneratorTest {
             @Override
             public String outputFile(TableInfo tableInfo) {
                 // 自定义输入文件名称
-                return "D://test/my_" + tableInfo.getEntityName() + ".java";
+                return "D://test/my_" + tableInfo.getEntityName() + StringPool.DOT_JAVA;
             }
         });
         cfg.setFileOutConfigList(focList);

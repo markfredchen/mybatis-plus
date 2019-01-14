@@ -15,15 +15,63 @@
  */
 package com.baomidou.mybatisplus.core.mapper;
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.core.toolkit.Constants;
+import org.apache.ibatis.annotations.Param;
+
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.session.RowBounds;
+/*
 
-import com.baomidou.mybatisplus.core.conditions.Wrapper;
+               :`
+                    .:,
+                     :::,,.
+             ::      `::::::
+             ::`    `,:,` .:`
+             `:: `::::::::.:`      `:';,`
+              ::::,     .:::`   `@++++++++:
+               ``        :::`  @+++++++++++#
+                         :::, #++++++++++++++`
+                 ,:      `::::::;'##++++++++++
+                 .@#@;`   ::::::::::::::::::::;
+                  #@####@, :::::::::::::::+#;::.
+                  @@######+@:::::::::::::.  #@:;
+           ,      @@########':::::::::::: .#''':`
+           ;##@@@+:##########@::::::::::: @#;.,:.
+            #@@@######++++#####'::::::::: .##+,:#`
+            @@@@@#####+++++'#####+::::::::` ,`::@#:`
+            `@@@@#####++++++'#####+#':::::::::::@.
+             @@@@######+++++''#######+##';::::;':,`
+              @@@@#####+++++'''#######++++++++++`
+               #@@#####++++++''########++++++++'
+               `#@######+++++''+########+++++++;
+                `@@#####+++++''##########++++++,
+                 @@######+++++'##########+++++#`
+                @@@@#####+++++############++++;
+              ;#@@@@@####++++##############+++,
+             @@@@@@@@@@@###@###############++'
+           @#@@@@@@@@@@@@###################+:
+        `@#@@@@@@@@@@@@@@###################'`
+      :@#@@@@@@@@@@@@@@@@@##################,
+      ,@@@@@@@@@@@@@@@@@@@@################;
+       ,#@@@@@@@@@@@@@@@@@@@##############+`
+        .#@@@@@@@@@@@@@@@@@@#############@,
+          @@@@@@@@@@@@@@@@@@@###########@,
+           :#@@@@@@@@@@@@@@@@##########@,
+            `##@@@@@@@@@@@@@@@########+,
+              `+@@@@@@@@@@@@@@@#####@:`
+                `:@@@@@@@@@@@@@@##@;.
+                   `,'@@@@##@@@+;,`
+                        ``...``
+
+ _ _     /_ _ _/_. ____  /    _
+/ / //_//_//_|/ /_\  /_///_/_\      Talk is cheap. Show me the code.
+     _/             /
+ */
 
 /**
  * <p>
@@ -34,7 +82,7 @@ import com.baomidou.mybatisplus.core.conditions.Wrapper;
  * </p>
  *
  * @author hubin
- * @Date 2016-01-23
+ * @since 2016-01-23
  */
 public interface BaseMapper<T> {
 
@@ -44,19 +92,8 @@ public interface BaseMapper<T> {
      * </p>
      *
      * @param entity 实体对象
-     * @return int
      */
-    Integer insert(T entity);
-
-    /**
-     * <p>
-     * 插入一条记录
-     * </p>
-     *
-     * @param entity 实体对象
-     * @return int
-     */
-    Integer insertAllColumn(T entity);
+    int insert(T entity);
 
     /**
      * <p>
@@ -64,9 +101,8 @@ public interface BaseMapper<T> {
      * </p>
      *
      * @param id 主键ID
-     * @return int
      */
-    Integer deleteById(Serializable id);
+    int deleteById(Serializable id);
 
     /**
      * <p>
@@ -74,9 +110,8 @@ public interface BaseMapper<T> {
      * </p>
      *
      * @param columnMap 表字段 map 对象
-     * @return int
      */
-    Integer deleteByMap(@Param("cm") Map<String, Object> columnMap);
+    int deleteByMap(@Param(Constants.COLUMN_MAP) Map<String, Object> columnMap);
 
     /**
      * <p>
@@ -84,19 +119,17 @@ public interface BaseMapper<T> {
      * </p>
      *
      * @param wrapper 实体对象封装操作类（可以为 null）
-     * @return int
      */
-    Integer delete(@Param("ew") Wrapper<T> wrapper);
+    int delete(@Param(Constants.WRAPPER) Wrapper<T> wrapper);
 
     /**
      * <p>
      * 删除（根据ID 批量删除）
      * </p>
      *
-     * @param idList 主键ID列表
-     * @return int
+     * @param idList 主键ID列表(不能为 null 以及 empty)
      */
-    Integer deleteBatchIds(@Param("coll") Collection<? extends Serializable> idList);
+    int deleteBatchIds(@Param(Constants.COLLECTION) Collection<? extends Serializable> idList);
 
     /**
      * <p>
@@ -104,30 +137,18 @@ public interface BaseMapper<T> {
      * </p>
      *
      * @param entity 实体对象
-     * @return int
      */
-    Integer updateById(@Param("et") T entity);
-
-    /**
-     * <p>
-     * 根据 ID 修改
-     * </p>
-     *
-     * @param entity 实体对象
-     * @return int
-     */
-    Integer updateAllColumnById(@Param("et") T entity);
+    int updateById(@Param(Constants.ENTITY) T entity);
 
     /**
      * <p>
      * 根据 whereEntity 条件，更新记录
      * </p>
      *
-     * @param entity  实体对象
-     * @param wrapper 实体对象封装操作类（可以为 null）
-     * @return
+     * @param entity        实体对象 (set 条件值,可以为 null)
+     * @param updateWrapper 实体对象封装操作类（可以为 null,里面的 entity 用于生成 where 语句）
      */
-    Integer update(@Param("et") T entity, @Param("ew") Wrapper<T> wrapper);
+    int update(@Param(Constants.ENTITY) T entity, @Param(Constants.WRAPPER) Wrapper<T> updateWrapper);
 
     /**
      * <p>
@@ -135,7 +156,6 @@ public interface BaseMapper<T> {
      * </p>
      *
      * @param id 主键ID
-     * @return T
      */
     T selectById(Serializable id);
 
@@ -144,10 +164,9 @@ public interface BaseMapper<T> {
      * 查询（根据ID 批量查询）
      * </p>
      *
-     * @param idList 主键ID列表
-     * @return List<T>
+     * @param idList 主键ID列表(不能为 null 以及 empty)
      */
-    List<T> selectBatchIds(@Param("coll") Collection<? extends Serializable> idList);
+    List<T> selectBatchIds(@Param(Constants.COLLECTION) Collection<? extends Serializable> idList);
 
     /**
      * <p>
@@ -155,49 +174,44 @@ public interface BaseMapper<T> {
      * </p>
      *
      * @param columnMap 表字段 map 对象
-     * @return List<T>
      */
-    List<T> selectByMap(@Param("cm") Map<String, Object> columnMap);
+    List<T> selectByMap(@Param(Constants.COLUMN_MAP) Map<String, Object> columnMap);
 
     /**
      * <p>
      * 根据 entity 条件，查询一条记录
      * </p>
      *
-     * @param entity 实体对象
-     * @return T
+     * @param queryWrapper 实体对象封装操作类（可以为 null）
      */
-    T selectOne(@Param("ew") T entity);
+    T selectOne(@Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
 
     /**
      * <p>
      * 根据 Wrapper 条件，查询总记录数
      * </p>
      *
-     * @param wrapper 实体对象
-     * @return int
+     * @param queryWrapper 实体对象封装操作类（可以为 null）
      */
-    Integer selectCount(@Param("ew") Wrapper<T> wrapper);
+    Integer selectCount(@Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
 
     /**
      * <p>
      * 根据 entity 条件，查询全部记录
      * </p>
      *
-     * @param wrapper 实体对象封装操作类（可以为 null）
-     * @return List<T>
+     * @param queryWrapper 实体对象封装操作类（可以为 null）
      */
-    List<T> selectList(@Param("ew") Wrapper<T> wrapper);
+    List<T> selectList(@Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
 
     /**
      * <p>
      * 根据 Wrapper 条件，查询全部记录
      * </p>
      *
-     * @param wrapper 实体对象封装操作类（可以为 null）
-     * @return List<T>
+     * @param queryWrapper 实体对象封装操作类（可以为 null）
      */
-    List<Map<String, Object>> selectMaps(@Param("ew") Wrapper<T> wrapper);
+    List<Map<String, Object>> selectMaps(@Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
 
     /**
      * <p>
@@ -205,31 +219,27 @@ public interface BaseMapper<T> {
      * 注意： 只返回第一个字段的值
      * </p>
      *
-     * @param wrapper 实体对象封装操作类（可以为 null）
-     * @return List<Object>
+     * @param queryWrapper 实体对象封装操作类（可以为 null）
      */
-    List<Object> selectObjs(@Param("ew") Wrapper<T> wrapper);
+    List<Object> selectObjs(@Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
 
     /**
      * <p>
      * 根据 entity 条件，查询全部记录（并翻页）
      * </p>
      *
-     * @param rowBounds 分页查询条件（可以为 RowBounds.DEFAULT）
-     * @param wrapper   实体对象封装操作类（可以为 null）
-     * @return List<T>
+     * @param page         分页查询条件（可以为 RowBounds.DEFAULT）
+     * @param queryWrapper 实体对象封装操作类（可以为 null）
      */
-    List<T> selectPage(RowBounds rowBounds, @Param("ew") Wrapper<T> wrapper);
+    IPage<T> selectPage(IPage<T> page, @Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
 
     /**
      * <p>
      * 根据 Wrapper 条件，查询全部记录（并翻页）
      * </p>
      *
-     * @param rowBounds 分页查询条件（可以为 RowBounds.DEFAULT）
-     * @param wrapper   实体对象封装操作类
-     * @return List<Map   <   String   ,       Object>>
+     * @param page         分页查询条件
+     * @param queryWrapper 实体对象封装操作类
      */
-    List<Map<String, Object>> selectMapsPage(RowBounds rowBounds, @Param("ew") Wrapper<T> wrapper);
-
+    IPage<Map<String, Object>> selectMapsPage(IPage<T> page, @Param(Constants.WRAPPER) Wrapper<T> queryWrapper);
 }

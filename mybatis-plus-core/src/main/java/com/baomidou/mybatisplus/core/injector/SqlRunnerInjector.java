@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014, hubin (jobob@qq.com).
+ * Copyright (c) 2011-2020, hubin (jobob@qq.com).
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -22,7 +22,6 @@ import org.apache.ibatis.logging.Log;
 import org.apache.ibatis.logging.LogFactory;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.ResultMap;
-import org.apache.ibatis.mapping.ResultMapping;
 import org.apache.ibatis.mapping.SqlCommandType;
 import org.apache.ibatis.mapping.SqlSource;
 import org.apache.ibatis.scripting.LanguageDriver;
@@ -79,7 +78,7 @@ public class SqlRunnerInjector {
         MappedStatement ms = new MappedStatement.Builder(configuration, mappedStatement, sqlSource, SqlCommandType.SELECT)
             .resultMaps(new ArrayList<ResultMap>() {
                 {
-                    add(new ResultMap.Builder(configuration, "defaultResultMap", resultType, new ArrayList<ResultMapping>(0))
+                    add(new ResultMap.Builder(configuration, "defaultResultMap", resultType, new ArrayList<>(0))
                         .build());
                 }
             }).build();
@@ -99,7 +98,7 @@ public class SqlRunnerInjector {
         MappedStatement ms = new MappedStatement.Builder(configuration, mappedStatement, sqlSource, sqlCommandType).resultMaps(
             new ArrayList<ResultMap>() {
                 {
-                    add(new ResultMap.Builder(configuration, "defaultResultMap", int.class, new ArrayList<ResultMapping>(0))
+                    add(new ResultMap.Builder(configuration, "defaultResultMap", int.class, new ArrayList<>(0))
                         .build());
                 }
             }).build();
@@ -115,7 +114,7 @@ public class SqlRunnerInjector {
             logger.warn("MappedStatement 'SqlRunner.SelectList' Already Exists");
             return;
         }
-        SqlSource sqlSource = languageDriver.createSqlSource(configuration, ISqlRunner.SQLScript, Map.class);
+        SqlSource sqlSource = languageDriver.createSqlSource(configuration, ISqlRunner.SQL_SCRIPT, Map.class);
         createSelectMappedStatement(ISqlRunner.SELECT_LIST, sqlSource, Map.class);
     }
 
@@ -127,7 +126,7 @@ public class SqlRunnerInjector {
             logger.warn("MappedStatement 'SqlRunner.SelectObjs' Already Exists");
             return;
         }
-        SqlSource sqlSource = languageDriver.createSqlSource(configuration, ISqlRunner.SQLScript, Object.class);
+        SqlSource sqlSource = languageDriver.createSqlSource(configuration, ISqlRunner.SQL_SCRIPT, Object.class);
         createSelectMappedStatement(ISqlRunner.SELECT_OBJS, sqlSource, Object.class);
     }
 
@@ -139,7 +138,7 @@ public class SqlRunnerInjector {
             logger.warn("MappedStatement 'SqlRunner.Count' Already Exists");
             return;
         }
-        SqlSource sqlSource = languageDriver.createSqlSource(configuration, ISqlRunner.SQLScript, Map.class);
+        SqlSource sqlSource = languageDriver.createSqlSource(configuration, ISqlRunner.SQL_SCRIPT, Map.class);
         createSelectMappedStatement(ISqlRunner.COUNT, sqlSource, Integer.class);
     }
 
@@ -151,7 +150,7 @@ public class SqlRunnerInjector {
             logger.warn("MappedStatement 'SqlRunner.Insert' Already Exists");
             return;
         }
-        SqlSource sqlSource = languageDriver.createSqlSource(configuration, ISqlRunner.SQLScript, Map.class);
+        SqlSource sqlSource = languageDriver.createSqlSource(configuration, ISqlRunner.SQL_SCRIPT, Map.class);
         createUpdateMappedStatement(ISqlRunner.INSERT, sqlSource, SqlCommandType.INSERT);
     }
 
@@ -163,7 +162,7 @@ public class SqlRunnerInjector {
             logger.warn("MappedStatement 'SqlRunner.Update' Already Exists");
             return;
         }
-        SqlSource sqlSource = languageDriver.createSqlSource(configuration, ISqlRunner.SQLScript, Map.class);
+        SqlSource sqlSource = languageDriver.createSqlSource(configuration, ISqlRunner.SQL_SCRIPT, Map.class);
         createUpdateMappedStatement(ISqlRunner.UPDATE, sqlSource, SqlCommandType.UPDATE);
     }
 
@@ -175,7 +174,7 @@ public class SqlRunnerInjector {
             logger.warn("MappedStatement 'SqlRunner.Delete' Already Exists");
             return;
         }
-        SqlSource sqlSource = languageDriver.createSqlSource(configuration, ISqlRunner.SQLScript, Map.class);
+        SqlSource sqlSource = languageDriver.createSqlSource(configuration, ISqlRunner.SQL_SCRIPT, Map.class);
         createUpdateMappedStatement(ISqlRunner.DELETE, sqlSource, SqlCommandType.DELETE);
     }
 }

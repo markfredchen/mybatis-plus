@@ -15,21 +15,19 @@
  */
 package com.baomidou.mybatisplus.core.parser;
 
-import org.apache.ibatis.logging.Log;
-import org.apache.ibatis.logging.LogFactory;
-import org.apache.ibatis.reflection.MetaObject;
-
-
-import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
-
+import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
 import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.parser.CCJSqlParserUtil;
 import net.sf.jsqlparser.statement.Statement;
+import net.sf.jsqlparser.statement.Statements;
 import net.sf.jsqlparser.statement.delete.Delete;
 import net.sf.jsqlparser.statement.insert.Insert;
 import net.sf.jsqlparser.statement.select.Select;
 import net.sf.jsqlparser.statement.select.SelectBody;
 import net.sf.jsqlparser.statement.update.Update;
+import org.apache.ibatis.logging.Log;
+import org.apache.ibatis.logging.LogFactory;
+import org.apache.ibatis.reflection.MetaObject;
 
 /**
  * <p>
@@ -37,7 +35,7 @@ import net.sf.jsqlparser.statement.update.Update;
  * </p>
  *
  * @author hubin
- * @Date 2017-06-20
+ * @since 2017-06-20
  */
 public abstract class AbstractJsqlParser implements ISqlParser {
 
@@ -48,7 +46,7 @@ public abstract class AbstractJsqlParser implements ISqlParser {
 
     /**
      * <p>
-     * 获取优化 SQL 方法
+     * 解析 SQL 方法
      * </p>
      *
      * @param metaObject 元对象
@@ -57,16 +55,27 @@ public abstract class AbstractJsqlParser implements ISqlParser {
      */
 
     @Override
-    public SqlInfo optimizeSql(MetaObject metaObject, String sql) {
+    public SqlInfo parser(MetaObject metaObject, String sql) {
         if (this.allowProcess(metaObject)) {
             try {
-                Statement statement = CCJSqlParserUtil.parse(sql);
                 logger.debug("Original SQL: " + sql);
-                if (null != statement) {
-                    return this.processParser(statement);
+                // fixed github pull/295
+                StringBuilder sqlStringBuilder = new StringBuilder();
+                Statements statements = CCJSqlParserUtil.parseStatements(sql);
+                int i = 0;
+                for (Statement statement : statements.getStatements()) {
+                    if (null != statement) {
+                        if (i++ > 0) {
+                            sqlStringBuilder.append(';');
+                        }
+                        sqlStringBuilder.append(this.processParser(statement).getSql());
+                    }
+                }
+                if (sqlStringBuilder.length() > 0) {
+                    return SqlInfo.newInstance().setSql(sqlStringBuilder.toString());
                 }
             } catch (JSQLParserException e) {
-                throw new MybatisPlusException("Failed to process, please exclude the tableName or statementId.\n Error SQL: " + sql, e);
+                throw ExceptionUtils.mpe("Failed to process, please exclude the tableName or statementId.\n Error SQL: %s", e, sql);
             }
         }
         return null;
@@ -94,16 +103,24 @@ public abstract class AbstractJsqlParser implements ISqlParser {
         return SqlInfo.newInstance().setSql(statement.toString());
     }
 
-    // 新增
+    /**
+     * 新增
+     */
     public abstract void processInsert(Insert insert);
 
-    // 删除
+    /**
+     * 删除
+     */
     public abstract void processDelete(Delete delete);
 
-    // 更新
+    /**
+     * 更新
+     */
     public abstract void processUpdate(Update update);
 
-    // 查询
+    /**
+     * 查询
+     */
     public abstract void processSelectBody(SelectBody selectBody);
 
     /**

@@ -21,45 +21,23 @@ package com.baomidou.mybatisplus.annotation;
  * </p>
  *
  * @author hubin
- * @Date 2017-06-27
+ * @since 2017-06-27
  */
 public enum FieldFill {
-    DEFAULT(0, "默认不处理"),
-    INSERT(1, "插入填充字段"),
-    UPDATE(2, "更新填充字段"),
-    INSERT_UPDATE(3, "插入和更新填充字段");
-
     /**
-     * 主键
+     * 默认不处理
      */
-    private final int key;
-
+    DEFAULT,
     /**
-     * 描述
+     * 插入填充字段
      */
-    private final String desc;
-
-    FieldFill(final int key, final String desc) {
-        this.key = key;
-        this.desc = desc;
-    }
-
-    public static FieldFill getIgnore(int key) {
-        FieldFill[] fis = FieldFill.values();
-        for (FieldFill fi : fis) {
-            if (fi.getKey() == key) {
-                return fi;
-            }
-        }
-        return FieldFill.DEFAULT;
-    }
-
-    public int getKey() {
-        return this.key;
-    }
-
-    public String getDesc() {
-        return this.desc;
-    }
-
+    INSERT,
+    /**
+     * 更新填充字段
+     */
+    UPDATE,
+    /**
+     * 插入和更新填充字段
+     */
+    INSERT_UPDATE
 }

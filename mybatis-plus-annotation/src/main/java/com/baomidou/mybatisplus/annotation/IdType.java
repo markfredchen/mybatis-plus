@@ -15,60 +15,49 @@
  */
 package com.baomidou.mybatisplus.annotation;
 
+import lombok.Getter;
+
 /**
  * <p>
  * 生成ID类型枚举类
  * </p>
  *
  * @author hubin
- * @Date 2015-11-10
+ * @since 2015-11-10
  */
+@Getter
 public enum IdType {
-    AUTO(0, "数据库ID自增"), INPUT(1, "用户输入ID"),
-
-    /* 以下2种类型、只有当插入对象ID 为空，才自动填充。 */
-    ID_WORKER(2, "全局唯一ID"), UUID(3, "全局唯一ID"), NONE(4, "该类型为未设置主键类型"),
-    ID_WORKER_STR(5, "字符串全局唯一ID");
-
     /**
-     * 主键
+     * 数据库ID自增
      */
+    AUTO(0),
+    /**
+     * 该类型为未设置主键类型
+     */
+    NONE(1),
+    /**
+     * 用户输入ID
+     * 该类型可以通过自己注册自动填充插件进行填充
+     */
+    INPUT(2),
+
+    /* 以下3种类型、只有当插入对象ID 为空，才自动填充。 */
+    /**
+     * 全局唯一ID (idWorker)
+     */
+    ID_WORKER(3),
+    /**
+     * 全局唯一ID (UUID)
+     */
+    UUID(4),
+    /**
+     * 字符串全局唯一ID (idWorker 的字符串表示)
+     */
+    ID_WORKER_STR(5);
+
     private final int key;
 
-    /**
-     * 描述
-     */
-    private final String desc;
-
-    IdType(final int key, final String desc) {
+    IdType(int key) {
         this.key = key;
-        this.desc = desc;
     }
-
-    /**
-     * <p>
-     * 主键策略 （默认 ID_WORKER）
-     * </p>
-     *
-     * @param idType ID 策略类型
-     * @return
-     */
-    public static IdType getIdType(int idType) {
-        IdType[] its = IdType.values();
-        for (IdType it : its) {
-            if (it.getKey() == idType) {
-                return it;
-            }
-        }
-        return ID_WORKER;
-    }
-
-    public int getKey() {
-        return this.key;
-    }
-
-    public String getDesc() {
-        return this.desc;
-    }
-
 }

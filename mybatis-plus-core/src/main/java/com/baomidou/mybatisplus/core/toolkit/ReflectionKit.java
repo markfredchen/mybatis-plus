@@ -15,6 +15,9 @@
  */
 package com.baomidou.mybatisplus.core.toolkit;
 
+import org.apache.ibatis.logging.Log;
+import org.apache.ibatis.logging.LogFactory;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -22,17 +25,17 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-import org.apache.ibatis.logging.Log;
-import org.apache.ibatis.logging.LogFactory;
-
-import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
-
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toCollection;
+import static java.util.stream.Collectors.toMap;
 
 /**
  * <p>
@@ -40,11 +43,15 @@ import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
  * </p>
  *
  * @author Caratacus
- * @Date 2016-09-22
+ * @since 2016-09-22
  */
 public class ReflectionKit {
 
     private static final Log logger = LogFactory.getLog(ReflectionKit.class);
+    /**
+     * class field cache
+     */
+    private static final Map<Class, List<Field>> classFieldCache = new ConcurrentHashMap<>();
 
     /**
      * <p>
@@ -53,12 +60,29 @@ public class ReflectionKit {
      *
      * @param field
      * @param str   属性字符串内容
-     * @return
      */
     public static String getMethodCapitalize(Field field, final String str) {
         Class<?> fieldType = field.getType();
         // fix #176
         return StringUtils.concatCapitalize(boolean.class.equals(fieldType) ? "is" : "get", str);
+    }
+
+    /**
+     * <p>
+     * 反射 method 方法名，例如 setVersion
+     * </p>
+     *
+     * @param field Field
+     * @param str   String JavaBean类的version属性名
+     * @return version属性的setter方法名称，e.g. setVersion
+     * @deprecated 3.0.8
+     */
+    @Deprecated
+    public static String setMethodCapitalize(Field field, final String str) {
+        Class<?> fieldType = field.getType();
+        // type of boolean's field, getter methodname is isGood(),
+        // setter methodname is setGood(boolean)
+        return StringUtils.concatCapitalize("set", str);
     }
 
     /**
@@ -74,20 +98,15 @@ public class ReflectionKit {
     public static Object getMethodValue(Class<?> cls, Object entity, String str) {
         Map<String, Field> fieldMaps = getFieldMap(cls);
         try {
-            if (MapUtils.isEmpty(fieldMaps)) {
-                throw new MybatisPlusException(
-                    String.format("Error: NoSuchField in %s for %s.  Cause:", cls.getSimpleName(), str));
-            }
+            Assert.notEmpty(fieldMaps, "Error: NoSuchField in %s for %s.  Cause:", cls.getSimpleName(), str);
             Method method = cls.getMethod(getMethodCapitalize(fieldMaps.get(str), str));
             return method.invoke(entity);
         } catch (NoSuchMethodException e) {
-            throw new MybatisPlusException(String.format("Error: NoSuchMethod in %s.  Cause:", cls.getSimpleName()) + e);
+            throw ExceptionUtils.mpe("Error: NoSuchMethod in %s.  Cause:", e, cls.getSimpleName());
         } catch (IllegalAccessException e) {
-            throw new MybatisPlusException(String.format("Error: Cannot execute a private method. in %s.  Cause:",
-                cls.getSimpleName())
-                + e);
+            throw ExceptionUtils.mpe("Error: Cannot execute a private method. in %s.  Cause:", e, cls.getSimpleName());
         } catch (InvocationTargetException e) {
-            throw new MybatisPlusException("Error: InvocationTargetException on getMethodValue.  Cause:" + e);
+            throw ExceptionUtils.mpe("Error: InvocationTargetException on getMethodValue.  Cause:" + e);
         }
     }
 
@@ -116,8 +135,7 @@ public class ReflectionKit {
      * @param index 泛型所在位置
      * @return Class
      */
-    @SuppressWarnings("rawtypes")
-    public static Class getSuperClassGenricType(final Class clazz, final int index) {
+    public static Class getSuperClassGenericType(final Class clazz, final int index) {
         Type genType = clazz.getGenericSuperclass();
         if (!(genType instanceof ParameterizedType)) {
             logger.warn(String.format("Warn: %s's superclass not ParameterizedType", clazz.getSimpleName()));
@@ -125,12 +143,13 @@ public class ReflectionKit {
         }
         Type[] params = ((ParameterizedType) genType).getActualTypeArguments();
         if (index >= params.length || index < 0) {
-            logger.warn(String.format("Warn: Index: %s, Size of %s's Parameterized Type: %s .", index, clazz.getSimpleName(),
-                params.length));
+            logger.warn(String.format("Warn: Index: %s, Size of %s's Parameterized Type: %s .", index,
+                clazz.getSimpleName(), params.length));
             return Object.class;
         }
         if (!(params[index] instanceof Class)) {
-            logger.warn(String.format("Warn: %s not set the actual class on superclass generic parameter", clazz.getSimpleName()));
+            logger.warn(String.format("Warn: %s not set the actual class on superclass generic parameter",
+                clazz.getSimpleName()));
             return Object.class;
         }
         return (Class) params[index];
@@ -142,18 +161,10 @@ public class ReflectionKit {
      * </p>
      *
      * @param clazz 反射类
-     * @return
      */
     public static Map<String, Field> getFieldMap(Class<?> clazz) {
         List<Field> fieldList = getFieldList(clazz);
-        Map<String, Field> fieldMap = Collections.emptyMap();
-        if (CollectionUtils.isNotEmpty(fieldList)) {
-            fieldMap = new LinkedHashMap<>();
-            for (Field field : fieldList) {
-                fieldMap.put(field.getName(), field);
-            }
-        }
-        return fieldMap;
+        return CollectionUtils.isNotEmpty(fieldList) ? fieldList.stream().collect(Collectors.toMap(Field::getName, field -> field)) : Collections.emptyMap();
     }
 
     /**
@@ -162,28 +173,38 @@ public class ReflectionKit {
      * </p>
      *
      * @param clazz 反射类
-     * @return
      */
     public static List<Field> getFieldList(Class<?> clazz) {
-        if (null == clazz) {
-            return null;
+        if (Objects.isNull(clazz)) {
+            return Collections.emptyList();
         }
-        List<Field> fieldList = new LinkedList<>();
-        Field[] fields = clazz.getDeclaredFields();
-        for (Field field : fields) {
+        List<Field> fields = classFieldCache.get(clazz);
+        if (CollectionUtils.isEmpty(fields)) {
+            synchronized (classFieldCache) {
+                fields = doGetFieldList(clazz);
+                classFieldCache.put(clazz, fields);
+            }
+        }
+        return fields;
+    }
+
+    /**
+     * <p>
+     * 获取该类的所有属性列表
+     * </p>
+     *
+     * @param clazz 反射类
+     */
+    public static List<Field> doGetFieldList(Class<?> clazz) {
+        List<Field> fieldList = Stream.of(clazz.getDeclaredFields())
             /* 过滤静态属性 */
-            if (Modifier.isStatic(field.getModifiers())) {
-                continue;
-            }
+            .filter(field -> !Modifier.isStatic(field.getModifiers()))
             /* 过滤 transient关键字修饰的属性 */
-            if (Modifier.isTransient(field.getModifiers())) {
-                continue;
-            }
-            fieldList.add(field);
-        }
+            .filter(field -> !Modifier.isTransient(field.getModifiers()))
+            .collect(toCollection(LinkedList::new));
         /* 处理父类字段 */
         Class<?> superClass = clazz.getSuperclass();
-        if (superClass.equals(Object.class)) {
+        if (superClass == null) {
             return fieldList;
         }
         /* 排除重载属性 */
@@ -200,16 +221,8 @@ public class ReflectionKit {
      */
     public static List<Field> excludeOverrideSuperField(List<Field> fieldList, List<Field> superFieldList) {
         // 子类属性
-        Map<String, Field> fieldMap = new HashMap<>();
-        for (Field field : fieldList) {
-            fieldMap.put(field.getName(), field);
-        }
-        for (Field superField : superFieldList) {
-            if (null == fieldMap.get(superField.getName())) {
-                // 加入重置父类属性
-                fieldList.add(superField);
-            }
-        }
+        Map<String, Field> fieldMap = fieldList.stream().collect(toMap(Field::getName, identity()));
+        superFieldList.stream().filter(field -> fieldMap.get(field.getName()) == null).forEach(fieldList::add);
         return fieldList;
     }
 }

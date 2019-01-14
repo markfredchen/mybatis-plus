@@ -16,6 +16,10 @@
 package com.baomidou.mybatisplus.generator.config;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.generator.config.rules.DateType;
+
+import lombok.Data;
+import lombok.experimental.Accessors;
 
 /**
  * <p>
@@ -25,6 +29,8 @@ import com.baomidou.mybatisplus.annotation.IdType;
  * @author hubin
  * @since 2016-12-02
  */
+@Data
+@Accessors(chain = true)
 public class GlobalConfig {
 
     /**
@@ -45,7 +51,7 @@ public class GlobalConfig {
     /**
      * 是否在xml中添加二级缓存配置
      */
-    private boolean enableCache = true;
+    private boolean enableCache = false;
 
     /**
      * 开发人员
@@ -58,9 +64,14 @@ public class GlobalConfig {
     private boolean kotlin = false;
 
     /**
+     * 开启 swagger2 模式
+     */
+    private boolean swagger2 = false;
+
+    /**
      * 开启 ActiveRecord 模式
      */
-    private boolean activeRecord = true;
+    private boolean activeRecord = false;
 
     /**
      * 开启 BaseResultMap
@@ -68,12 +79,19 @@ public class GlobalConfig {
     private boolean baseResultMap = false;
 
     /**
+     * 时间类型对应策略
+     */
+    private DateType dateType = DateType.TIME_PACK;
+
+    /**
      * 开启 baseColumnList
      */
     private boolean baseColumnList = false;
     /**
-     * 各层文件名称方式，例如： %Action 生成 UserAction
+     * 各层文件名称方式，例如： %sAction 生成 UserAction
+     * %s 为占位符
      */
+    private String entityName;
     private String mapperName;
     private String xmlName;
     private String serviceName;
@@ -83,139 +101,4 @@ public class GlobalConfig {
      * 指定生成的主键的ID类型
      */
     private IdType idType;
-
-    public GlobalConfig setIdType(IdType idType) {
-        this.idType = idType;
-        return this;
-    }
-
-    public IdType getIdType() {
-        return idType;
-    }
-
-    public String getOutputDir() {
-        return outputDir;
-    }
-
-    public GlobalConfig setOutputDir(String outputDir) {
-        this.outputDir = outputDir;
-        return this;
-    }
-
-    public boolean isFileOverride() {
-        return fileOverride;
-    }
-
-    public GlobalConfig setFileOverride(boolean fileOverride) {
-        this.fileOverride = fileOverride;
-        return this;
-    }
-
-    public boolean isOpen() {
-        return open;
-    }
-
-    public GlobalConfig setOpen(boolean open) {
-        this.open = open;
-        return this;
-    }
-
-    public boolean isEnableCache() {
-        return enableCache;
-    }
-
-    public GlobalConfig setEnableCache(boolean enableCache) {
-        this.enableCache = enableCache;
-        return this;
-    }
-
-    public String getAuthor() {
-        return author;
-    }
-
-    public GlobalConfig setAuthor(String author) {
-        this.author = author;
-        return this;
-    }
-
-    public boolean isKotlin() {
-        return kotlin;
-    }
-
-    public GlobalConfig setKotlin(boolean kotlin) {
-        this.kotlin = kotlin;
-        return this;
-    }
-
-    public boolean isActiveRecord() {
-        return activeRecord;
-    }
-
-    public GlobalConfig setActiveRecord(boolean activeRecord) {
-        this.activeRecord = activeRecord;
-        return this;
-    }
-
-    public boolean isBaseResultMap() {
-        return baseResultMap;
-    }
-
-    public GlobalConfig setBaseResultMap(boolean baseResultMap) {
-        this.baseResultMap = baseResultMap;
-        return this;
-    }
-
-    public boolean isBaseColumnList() {
-        return baseColumnList;
-    }
-
-    public GlobalConfig setBaseColumnList(boolean baseColumnList) {
-        this.baseColumnList = baseColumnList;
-        return this;
-    }
-
-    public String getMapperName() {
-        return mapperName;
-    }
-
-    public GlobalConfig setMapperName(String mapperName) {
-        this.mapperName = mapperName;
-        return this;
-    }
-
-    public String getXmlName() {
-        return xmlName;
-    }
-
-    public GlobalConfig setXmlName(String xmlName) {
-        this.xmlName = xmlName;
-        return this;
-    }
-
-    public String getServiceName() {
-        return serviceName;
-    }
-
-    public GlobalConfig setServiceName(String serviceName) {
-        this.serviceName = serviceName;
-        return this;
-    }
-
-    public String getServiceImplName() {
-        return serviceImplName;
-    }
-
-    public GlobalConfig setServiceImplName(String serviceImplName) {
-        this.serviceImplName = serviceImplName;
-        return this;
-    }
-
-    public String getControllerName() {
-        return controllerName;
-    }
-
-    public GlobalConfig setControllerName(String controllerName) {
-        this.controllerName = controllerName;
-        return this;
-    }
 }

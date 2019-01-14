@@ -24,7 +24,7 @@ import com.baomidou.mybatisplus.core.metadata.TableInfo;
 
 /**
  * <p>
- * 根据 ID 删除
+ * 根据 whereEntity 条件，更新记录
  * </p>
  *
  * @author hubin
@@ -35,8 +35,8 @@ public class Update extends AbstractMethod {
     @Override
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
         SqlMethod sqlMethod = SqlMethod.UPDATE;
-        String sql = String.format(sqlMethod.getSql(), tableInfo.getTableName(), sqlSet(true, tableInfo, "et."),
-            this.sqlWhereEntityWrapper(tableInfo));
+        String sql = String.format(sqlMethod.getSql(), tableInfo.getTableName(),
+            sqlSet(false, true, tableInfo, ENTITY, ENTITY_DOT), sqlWhereEntityWrapper(true, tableInfo));
         SqlSource sqlSource = languageDriver.createSqlSource(configuration, sql, modelClass);
         return this.addUpdateMappedStatement(mapperClass, modelClass, sqlMethod.getMethod(), sqlSource);
     }

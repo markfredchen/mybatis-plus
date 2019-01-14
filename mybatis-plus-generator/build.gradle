@@ -1,14 +1,14 @@
 dependencies {
-    compile project(":mybatis-plus-extension")
+    api project(":mybatis-plus-extension")
 
-    optional rootProject.ext.dependencies["velocity"]
-    optional rootProject.ext.dependencies["freemarker"]
+    implementation "${lib.velocity}"
+    implementation "${lib.freemarker}"
+    implementation "${lib.beetl}"
 
-    testCompile rootProject.ext.dependencies["sqlserver"]
-    testCompile rootProject.ext.dependencies["postgresql"]
-    testCompile rootProject.ext.dependencies["oracle"]
-    testCompile rootProject.ext.dependencies["h2"]
-    testCompile rootProject.ext.dependencies["mysql"]
-    testCompile rootProject.ext.dependencies["logback-classic"]
-    testCompile rootProject.ext.dependencies["junit"]
+    testCompile "${lib.sqlserver}"
+    testCompile "${lib.postgresql}"
+    testCompile lib.oracle as ConfigurableFileTree
+    testCompile "${lib.h2}"
+    testCompile "${lib.mysql}"
+    testCompile "${lib.'logback-classic'}"
 }

@@ -15,7 +15,7 @@
  */
 package com.baomidou.mybatisplus.generator.config;
 
-import com.baomidou.mybatisplus.generator.config.rules.DbColumnType;
+import com.baomidou.mybatisplus.generator.config.rules.IColumnType;
 
 /**
  * <p>
@@ -23,18 +23,19 @@ import com.baomidou.mybatisplus.generator.config.rules.DbColumnType;
  * </p>
  *
  * @author hubin
- * @date 2017-01-20
+ * @since 2017-01-20
  */
 public interface ITypeConvert {
+
 
     /**
      * <p>
      * 执行类型转换
      * </p>
      *
-     * @param fieldType 字段类型
+     * @param globalConfig 全局配置
+     * @param fieldType    字段类型
      * @return
      */
-    DbColumnType processTypeConvert(String fieldType);
-
+    IColumnType processTypeConvert(GlobalConfig globalConfig, String fieldType);
 }

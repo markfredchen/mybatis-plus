@@ -15,11 +15,15 @@
  */
 package com.baomidou.mybatisplus.generator.config.po;
 
-import java.util.Map;
-
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.generator.config.StrategyConfig;
 import com.baomidou.mybatisplus.generator.config.rules.DbColumnType;
+import com.baomidou.mybatisplus.generator.config.rules.IColumnType;
+import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
+import lombok.Data;
+import lombok.experimental.Accessors;
+
+import java.util.Map;
 
 /**
  * <p>
@@ -29,6 +33,8 @@ import com.baomidou.mybatisplus.generator.config.rules.DbColumnType;
  * @author YangHu
  * @since 2016-12-03
  */
+@Data
+@Accessors(chain = true)
 public class TableField {
 
     private boolean convert;
@@ -40,7 +46,7 @@ public class TableField {
     private String name;
     private String type;
     private String propertyName;
-    private DbColumnType columnType;
+    private IColumnType columnType;
     private String comment;
     private String fill;
     /**
@@ -48,16 +54,21 @@ public class TableField {
      */
     private Map<String, Object> customMap;
 
-    public boolean isConvert() {
-        return convert;
+    public TableField setConvert(boolean convert) {
+        this.convert = convert;
+        return this;
     }
 
-    protected void setConvert(StrategyConfig strategyConfig) {
+    protected TableField setConvert(StrategyConfig strategyConfig) {
+        if (strategyConfig.isEntityTableFieldAnnotationEnable()) {
+            this.convert = true;
+            return this;
+        }
         if (strategyConfig.isCapitalModeNaming(name)) {
             this.convert = false;
         } else {
             // 转换字段
-            if (StrategyConfig.DB_COLUMN_UNDERLINE) {
+            if (NamingStrategy.underline_to_camel == strategyConfig.getColumnNaming()) {
                 // 包含大写处理
                 if (StringUtils.containsUpperCase(name)) {
                     this.convert = true;
@@ -66,59 +77,13 @@ public class TableField {
                 this.convert = true;
             }
         }
+        return this;
     }
 
-    public void setConvert(boolean convert) {
-        this.convert = convert;
-    }
-
-    public boolean isKeyFlag() {
-        return keyFlag;
-    }
-
-    public void setKeyFlag(boolean keyFlag) {
-        this.keyFlag = keyFlag;
-    }
-
-    public boolean isKeyIdentityFlag() {
-        return keyIdentityFlag;
-    }
-
-    public void setKeyIdentityFlag(boolean keyIdentityFlag) {
-        this.keyIdentityFlag = keyIdentityFlag;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String getPropertyName() {
-        return propertyName;
-    }
-
-    public void setPropertyName(StrategyConfig strategyConfig, String propertyName) {
+    public TableField setPropertyName(StrategyConfig strategyConfig, String propertyName) {
         this.propertyName = propertyName;
         this.setConvert(strategyConfig);
-    }
-
-    public DbColumnType getColumnType() {
-        return columnType;
-    }
-
-    public void setColumnType(DbColumnType columnType) {
-        this.columnType = columnType;
+        return this;
     }
 
     public String getPropertyType() {
@@ -126,14 +91,6 @@ public class TableField {
             return columnType.getType();
         }
         return null;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
     }
 
     /**
@@ -154,21 +111,5 @@ public class TableField {
             return firstChar.toLowerCase() + setGetName.substring(1);
         }
         return firstChar.toUpperCase() + setGetName.substring(1);
-    }
-
-    public String getFill() {
-        return fill;
-    }
-
-    public void setFill(String fill) {
-        this.fill = fill;
-    }
-
-    public Map<String, Object> getCustomMap() {
-        return customMap;
-    }
-
-    public void setCustomMap(Map<String, Object> customMap) {
-        this.customMap = customMap;
     }
 }

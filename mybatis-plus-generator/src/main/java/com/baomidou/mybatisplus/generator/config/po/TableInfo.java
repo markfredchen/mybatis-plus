@@ -15,15 +15,17 @@
  */
 package com.baomidou.mybatisplus.generator.config.po;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.generator.config.StrategyConfig;
+import com.baomidou.mybatisplus.generator.config.rules.NamingStrategy;
+import lombok.Data;
+import lombok.experimental.Accessors;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.IntStream;
 
 /**
  * <p>
@@ -33,30 +35,33 @@ import com.baomidou.mybatisplus.generator.config.StrategyConfig;
  * @author YangHu
  * @since 2016/8/30
  */
+@Data
+@Accessors(chain = true)
 public class TableInfo {
 
+    private final Set<String> importPackages = new HashSet<>();
     private boolean convert;
     private String name;
     private String comment;
-
     private String entityName;
     private String mapperName;
     private String xmlName;
     private String serviceName;
     private String serviceImplName;
     private String controllerName;
-
     private List<TableField> fields;
-    // 公共字段
+    /**
+     * 公共字段
+     */
     private List<TableField> commonFields;
-    private List<String> importPackages = new ArrayList<>();
     private String fieldNames;
 
-    public boolean isConvert() {
-        return convert;
+    public TableInfo setConvert(boolean convert) {
+        this.convert = convert;
+        return this;
     }
 
-    protected void setConvert(StrategyConfig strategyConfig) {
+    protected TableInfo setConvert(StrategyConfig strategyConfig) {
         if (strategyConfig.containsTablePrefix(name)) {
             // 包含前缀
             this.convert = true;
@@ -65,7 +70,7 @@ public class TableInfo {
             this.convert = false;
         } else {
             // 转换字段
-            if (StrategyConfig.DB_COLUMN_UNDERLINE) {
+            if (NamingStrategy.underline_to_camel == strategyConfig.getColumnNaming()) {
                 // 包含大写处理
                 if (StringUtils.containsUpperCase(name)) {
                     this.convert = true;
@@ -74,182 +79,78 @@ public class TableInfo {
                 this.convert = true;
             }
         }
-    }
-
-    public void setConvert(boolean convert) {
-        this.convert = convert;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getComment() {
-        return comment;
-    }
-
-    public void setComment(String comment) {
-        this.comment = comment;
+        return this;
     }
 
     public String getEntityPath() {
-        StringBuilder ep = new StringBuilder();
-        ep.append(entityName.substring(0, 1).toLowerCase());
-        ep.append(entityName.substring(1));
-        return ep.toString();
+        return entityName.substring(0, 1).toLowerCase() + entityName.substring(1);
     }
 
-    public String getEntityName() {
-        return entityName;
-    }
-
-    public void setEntityName(StrategyConfig strategyConfig, String entityName) {
+    public TableInfo setEntityName(StrategyConfig strategyConfig, String entityName) {
         this.entityName = entityName;
         this.setConvert(strategyConfig);
+        return this;
     }
 
-    public String getMapperName() {
-        return mapperName;
-    }
-
-    public void setMapperName(String mapperName) {
-        this.mapperName = mapperName;
-    }
-
-    public String getXmlName() {
-        return xmlName;
-    }
-
-    public void setXmlName(String xmlName) {
-        this.xmlName = xmlName;
-    }
-
-    public String getServiceName() {
-        return serviceName;
-    }
-
-    public void setServiceName(String serviceName) {
-        this.serviceName = serviceName;
-    }
-
-    public String getServiceImplName() {
-        return serviceImplName;
-    }
-
-    public void setServiceImplName(String serviceImplName) {
-        this.serviceImplName = serviceImplName;
-    }
-
-    public String getControllerName() {
-        return controllerName;
-    }
-
-    public void setControllerName(String controllerName) {
-        this.controllerName = controllerName;
-    }
-
-    public List<TableField> getFields() {
-        return fields;
-    }
-
-    public void setFields(List<TableField> fields) {
+    public TableInfo setFields(List<TableField> fields) {
         if (CollectionUtils.isNotEmpty(fields)) {
             this.fields = fields;
             // 收集导入包信息
-            Set<String> pkgSet = new HashSet<>();
             for (TableField field : fields) {
                 if (null != field.getColumnType() && null != field.getColumnType().getPkg()) {
-                    pkgSet.add(field.getColumnType().getPkg());
+                    importPackages.add(field.getColumnType().getPkg());
                 }
                 if (field.isKeyFlag()) {
                     // 主键
                     if (field.isConvert() || field.isKeyIdentityFlag()) {
-                        pkgSet.add("com.baomidou.mybatisplus.annotations.TableId");
+                        importPackages.add(com.baomidou.mybatisplus.annotation.TableId.class.getCanonicalName());
                     }
                     // 自增
                     if (field.isKeyIdentityFlag()) {
-                        pkgSet.add("com.baomidou.mybatisplus.enums.IdType");
+                        importPackages.add(com.baomidou.mybatisplus.annotation.IdType.class.getCanonicalName());
                     }
                 } else if (field.isConvert()) {
                     // 普通字段
-                    pkgSet.add("com.baomidou.mybatisplus.annotations.TableField");
+                    importPackages.add(com.baomidou.mybatisplus.annotation.TableField.class.getCanonicalName());
                 }
                 if (null != field.getFill()) {
                     // 填充字段
-                    pkgSet.add("com.baomidou.mybatisplus.annotations.TableField");
-                    pkgSet.add("com.baomidou.mybatisplus.enums.FieldFill");
+                    importPackages.add(com.baomidou.mybatisplus.annotation.TableField.class.getCanonicalName());
+                    importPackages.add(com.baomidou.mybatisplus.annotation.FieldFill.class.getCanonicalName());
                 }
             }
-            if (!pkgSet.isEmpty()) {
-                this.importPackages = new ArrayList<>(Arrays.asList(pkgSet.toArray(new String[]{})));
-            }
         }
+        return this;
     }
 
-    public List<TableField> getCommonFields() {
-        return commonFields;
-    }
-
-    public void setCommonFields(List<TableField> commonFields) {
-        this.commonFields = commonFields;
-    }
-
-    public List<String> getImportPackages() {
-        return importPackages;
-    }
-
-    public void setImportPackages(String pkg) {
+    public TableInfo setImportPackages(String pkg) {
         importPackages.add(pkg);
+        return this;
     }
 
     /**
      * 逻辑删除
      */
     public boolean isLogicDelete(String logicDeletePropertyName) {
-        for (TableField tableField : fields) {
-            if (tableField.getName().equals(logicDeletePropertyName)) {
-                return true;
-            }
-        }
-        return false;
+        return fields.parallelStream().anyMatch(tf -> tf.getName().equals(logicDeletePropertyName));
     }
 
     /**
-     * 转换filed实体为xmlmapper中的basecolumn字符串信息
-     *
-     * @return
+     * 转换filed实体为 xml mapper 中的 base column 字符串信息
      */
     public String getFieldNames() {
         if (StringUtils.isEmpty(fieldNames)) {
             StringBuilder names = new StringBuilder();
-            for (int i = 0; i < fields.size(); i++) {
+            IntStream.range(0, fields.size()).forEach(i -> {
                 TableField fd = fields.get(i);
                 if (i == fields.size() - 1) {
-                    names.append(cov2col(fd));
+                    names.append(fd.getName());
                 } else {
-                    names.append(cov2col(fd)).append(", ");
+                    names.append(fd.getName()).append(", ");
                 }
-            }
+            });
             fieldNames = names.toString();
         }
         return fieldNames;
     }
-
-    /**
-     * mapper xml中的字字段添加as
-     *
-     * @param field 字段实体
-     * @return 转换后的信息
-     */
-    private String cov2col(TableField field) {
-        if (null != field) {
-            return field.isConvert() ? field.getName() + " AS " + field.getPropertyName() : field.getName();
-        }
-        return StringUtils.EMPTY;
-    }
-
 }

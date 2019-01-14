@@ -32,7 +32,6 @@ import com.baomidou.mybatisplus.generator.config.PackageConfig;
 import com.baomidou.mybatisplus.generator.config.StrategyConfig;
 import com.baomidou.mybatisplus.generator.config.TemplateConfig;
 import com.baomidou.mybatisplus.generator.config.builder.ConfigBuilder;
-import com.baomidou.mybatisplus.generator.config.po.TableField;
 import com.baomidou.mybatisplus.generator.config.po.TableInfo;
 import com.baomidou.mybatisplus.generator.engine.AbstractTemplateEngine;
 import com.baomidou.mybatisplus.generator.engine.VelocityTemplateEngine;
@@ -142,7 +141,7 @@ public class AutoGenerator {
                 // 表注解
                 tableInfo.setImportPackages(TableName.class.getCanonicalName());
             }
-            if (tableInfo.isLogicDelete(config.getStrategyConfig().getLogicDeleteFieldName())) {
+            if (config.getStrategyConfig().getLogicDeleteFieldName() != null && tableInfo.isLogicDelete(config.getStrategyConfig().getLogicDeleteFieldName())) {
                 // 逻辑删除注解
                 tableInfo.setImportPackages(TableLogic.class.getCanonicalName());
             }
@@ -158,14 +157,10 @@ public class AutoGenerator {
             }
             // Boolean类型is前缀处理
             if (config.getStrategyConfig().isEntityBooleanColumnRemoveIsPrefix()) {
-                for (TableField field : tableInfo.getFields()) {
-                    if (field.getPropertyType().equalsIgnoreCase("boolean")) {
-                        if (field.getPropertyName().startsWith("is")) {
-                            field.setPropertyName(config.getStrategyConfig(),
-                                StringUtils.removePrefixAfterPrefixToLower(field.getPropertyName(), 2));
-                        }
-                    }
-                }
+                tableInfo.getFields().stream().filter(field -> "boolean".equalsIgnoreCase(field.getPropertyType()))
+                    .filter(field -> field.getPropertyName().startsWith("is"))
+                    .forEach(field -> field.setPropertyName(config.getStrategyConfig(),
+                        StringUtils.removePrefixAfterPrefixToLower(field.getPropertyName(), 2)));
             }
         }
         return config.setTableInfoList(tableList);
