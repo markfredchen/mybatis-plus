@@ -677,7 +677,7 @@ public class StringUtils {
      * @return
      */
     public static boolean isBoolean(Class<?> propertyCls) {
-        return propertyCls != null && (boolean.class.isAssignableFrom(propertyCls) || Boolean.class.isAssignableFrom(propertyCls));
+        return propertyCls != null && boolean.class.isAssignableFrom(propertyCls);
     }
 
     /**

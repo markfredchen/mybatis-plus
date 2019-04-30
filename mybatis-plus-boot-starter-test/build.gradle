@@ -1,0 +1,9 @@
+dependencies {
+    compile project(':mybatis-plus-boot-starter')
+    compile rootProject.ext.dependencies['springboot-autoconfigure']
+    compile rootProject.ext.dependencies['spring-test']
+    compile rootProject.ext.dependencies['junit-juptier-api']
+    compile(rootProject.ext.dependencies['springboot-starter-test']) {
+        exclude group: 'junit', module: 'junit'
+    }
+}

@@ -53,11 +53,15 @@ ext {
         "springboot-autoconfigure"          : "org.springframework.boot:spring-boot-autoconfigure:${springBootVersion}",
         "springboot-configuration-processor": "org.springframework.boot:spring-boot-configuration-processor:${springBootVersion}",
         "springboot-starter-jdbc"           : "org.springframework.boot:spring-boot-starter-jdbc:${springBootVersion}",
+        "springboot-starter-test"           : "org.springframework.boot:spring-boot-starter-test:${springBootVersion}",
+
+        // test
+        "junit-juptier-api"                 : "org.junit.jupiter:junit-jupiter-api:5.4.2",
     ]
 }
 
 allprojects {
-    group = 'com.baomidou'
+    group = 'com.cloudhelios.phoenix'
     version = '3.0.4'
 }
 
@@ -83,7 +87,6 @@ configure(subprojects) {
 subprojects {
 
     apply plugin: 'java'
-    apply plugin: 'signing'
     apply plugin: 'nebula.optional-base'
 
     sourceCompatibility = "${javaVersion}"
@@ -107,6 +110,7 @@ subprojects {
         testCompile rootProject.ext.dependencies["mockito-all"]
         testCompile rootProject.ext.dependencies["lombok"]
         testCompile rootProject.ext.dependencies["junit"]
+        annotationProcessor rootProject.ext.dependencies['lombok']
     }
 
     task sourcesJar(type: Jar, dependsOn: classes) {
@@ -114,59 +118,36 @@ subprojects {
         from sourceSets.main.allSource
     }
 
-    javadoc {
-        options {
-            encoding "UTF-8"
-            charSet 'UTF-8'
-            author true
-            version true
-            failOnError false
-            links "http://docs.oracle.com/javase/8/docs/api"
-        }
-    }
-
-    task javadocJar(type: Jar, dependsOn: javadoc) {
-        classifier = 'javadoc'
-        from 'build/docs/javadoc'
-    }
 
     artifacts {
         archives sourcesJar
-        archives javadocJar
-    }
-
-    tasks.whenTaskAdded { task ->
-        if (task.name.contains('uploadArchives') || task.name.contains("signArchives")) {
-            task.enabled = new File(project.property('signing.secretKeyRingFile') as String).isFile()
-        }
-    }
-
-    signing {
-        sign configurations.archives
     }
 
     // gradle clean build uploadArchives -Dun=用户名 -Dps=密码 -x test
     uploadArchives {
         repositories {
             mavenDeployer {
-                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-                def userName = System.getProperty("un")
-                def passWord = System.getProperty("ps")
-                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                    //noinspection GroovyAssignabilityCheck
-                    authentication(userName: userName, password: passWord)
+                def isLocal = Boolean.valueOf(project.properties.get('local'))
+                if (isLocal) {
+                    def localRepositoryPath = project.properties.get('localRepositoryPath')
+                    repository(url: uri(localRepositoryPath))
+                } else {
+                    def username = System.getProperty("un")
+                    def password = System.getProperty("ps")
+                    pom.version = "$project.version"
+                    pom.artifactId = "$project.name"
+                    pom.groupId = "$project.group"
+                    def repositoryUrl;
+                    if (pom.version.endsWith('SNAPSHOT')) {
+                        repositoryUrl = 'https://nexus.huilianyi.com/repository/maven-snapshots/'
+                    } else {
+                        repositoryUrl = 'https://nexus.huilianyi.com/repository/maven-releases/'
+                    }
+                    repository(url: repositoryUrl) {
+                        authentication(userName: username, password: password)
+                    }
                 }
-
-                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                    //noinspection GroovyAssignabilityCheck
-                    authentication(userName: userName, password: passWord)
-                }
-
-                pom.version = "$project.version"
-                pom.artifactId = "$project.name"
-                pom.groupId = "$project.group"
                 pom.project {
-                    //noinspection GroovyAssignabilityCheck
                     name 'mybatis-plus'
                     packaging 'jar'
                     description 'An enhanced toolkit of Mybatis to simplify development.'
